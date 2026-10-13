@@ -26,26 +26,46 @@ three offer the same features with the same rules. `cbrm features` lists them.
 <!-- features:begin (generated from the registry; tests/test_docs.py keeps it complete) -->
 | Feature | Risk | Arguments | What it does |
 |---|---|---|---|
+| `account-credit` | read | – | The account's credit balance as the panel shows it (account-wide) |
+| `account-ssh-keys` | read | – | SSH keys stored in the panel account (account-wide): id, name, MD5 fingerprint |
+| `addresses` | read | – | The VM's IPv4/IPv6 addresses with prefix length, gateway and reverse DNS entry |
+| `automatic-backup-status` | read | – | Whether the automatic backup is enabled, and its last and next run (panel time) |
+| `backups` | read | – | The VM's backups (id, title, size, date; panel time) and how many backup slots are free |
 | `boot-order` | read | – | Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network) |
 | `console` | read | `--out` | A screenshot of the VNC console (PNG) |
 | `drives` | read | – | The VM's CD drives and what is inserted (live state from the hypervisor) |
 | `isos` | read | `--search`? | ISO images the panel can insert (public ones and the account's own), optionally filtered |
 | `logs` | read | `--n`? | The panel's action log, newest first, in panel time (Europe/Berlin) |
+| `renewal` | read | – | Remaining runtime, automatic renewal (runtimes with the prices the panel quotes, payment method), whether the server can be upgraded, and the account credit |
 | `rescue` | read | – | Rescue system state and the available rescue images |
 | `ssh-keys` | read | – | SSH keys stored in the panel account: name -> id |
+| `stats` | read | – | Current CPU, RAM and disk use, uptime, ping, traffic and running network/disk counters |
+| `stats-history` | read | `--timeframe`? `--metric`? | CPU, RAM, disk or network figures over a time frame: min, average, max and last value per series (cpu and ram in percent, disk in MB/s, network in Mbit/s) |
 | `status` | read | – | State, hostname, addresses, last backup and last installed template |
+| `tasks` | read | – | The VM's scheduled tasks: id, action, repeat interval and next run (panel time) |
 | `templates` | read | – | Operating systems the panel can install: name -> template id |
 | `root-password` | secret | – | The root password as the panel shows it |
+| `account-ssh-key-delete` | change | `--key` | Delete an SSH key from the panel account (account-wide; servers already installed keep it) |
+| `account-ssh-key-import` | change | `--name` `--public-key` | Store a public SSH key in the panel account (account-wide; it can then be baked into a reinstall) |
+| `backup-create` | change | `--title` | Create a backup now (the panel makes it in the background; needs a free slot, see `backups`) |
 | `boot-order-set` | change | `--order …` | Set the boot order: every device key from `boot-order`, first boots first |
 | `console-input` | change | `--text`? `--keys …`? `--repeat`? `--interval`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); repeat the keys to catch a boot menu |
 | `drive-delete` | change | `--drive` | Remove a CD drive from the VM (a VM should have one CD drive, the disk and network) |
+| `hostname-set` | change | `--hostname` | Set the VM's host name in the panel (lower-cased; letters, digits, hyphens, dots) |
 | `iso-add` | change | `--url` `--title` | Add your own ISO to the account from a public download URL (kept at least 6 months) |
 | `iso-mount` | change | `--drive` `--iso` | Insert an ISO (id, title or file name from `isos`) into a CD drive |
 | `iso-unmount` | change | `--drive` | Remove the ISO from a CD drive |
 | `power` | change | `--action` | Start, stop (hard), shut down (ACPI) or restart the VM |
+| `rdns-set` | change | `--address` `--name` | Set the reverse DNS name of one of the VM's IP addresses (see `addresses`) |
+| `rename` | change | `--name` | Rename the product in the panel (its display name, not the host name) |
 | `rescue-disable` | change | – | Leave the rescue system |
 | `rescue-enable` | change | `--image` | Boot the next time into a rescue image (id or title from `rescue`) |
 | `set-root-password` | change | `--password`? | Set the root password (generated if omitted); returns it |
+| `task-create` | change | `--action` `--interval` `--start` | Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, 3-days, 5-days, weekly, 2-weeks, monthly, yearly). A stop/restart task keeps interrupting the VM |
+| `task-delete` | change | `--task` | Delete a scheduled task (deleting the weekly backup task switches the automatic backup off) |
+| `backup-delete` | destroy | `--backup` | Delete a backup. THE BACKUP IS GONE |
+| `backup-restore` | destroy | `--backup` `--live`? | Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state |
+| `network-reset` | destroy | – | Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): everything you configured there is lost |
 | `reinstall` | destroy | `--template` `--ssh-keys …`? | Reinstall from a template with stored SSH keys baked in. ERASES THE DISK |
 <!-- features:end -->
 
