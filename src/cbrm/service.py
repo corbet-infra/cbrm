@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import datetime
 import os
+import secrets
+import string
 from pathlib import Path
 
 from .panel import POWER_ACTIONS, Panel
@@ -54,6 +56,43 @@ class Service:
         self._audit(f"power {vm} {action} requested")
         r = self.panel.power(vm, action)
         self._audit(f"power {vm} {action} -> {r}")
+        return r
+
+    def templates(self, vm: str) -> dict:
+        return self.panel.templates(self._vm(vm))
+
+    def ssh_keys(self, vm: str) -> dict:
+        return self.panel.ssh_keys(self._vm(vm))
+
+    def root_password(self, vm: str, confirm: str) -> dict:
+        """Reveals a secret: needs the target repeated, and is audited (without the value)."""
+        self._vm(vm, confirm, changing=True)
+        self._audit(f"root-password {vm} read")
+        return {"vm": vm, "root_password": self.panel.root_password(vm)}
+
+    def set_root_password(self, vm: str, confirm: str, password: str | None = None) -> dict:
+        self._vm(vm, confirm, changing=True)
+        password = password or "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
+        self._audit(f"root-password {vm} set")
+        r = self.panel.set_root_password(vm, password)
+        self._audit(f"root-password {vm} set -> {r.get('state')}")
+        return {**r, "root_password": password}
+
+    def reinstall(self, vm: str, template: str, ssh_keys: list[str], confirm: str, confirm_destroy: str) -> dict:
+        """ERASES THE DISK. Needs confirm=<vm> AND confirm_destroy=<vm>. template and ssh_keys are names
+        as the panel shows them (see templates() and ssh_keys())."""
+        self._vm(vm, confirm, changing=True)
+        if confirm_destroy != vm:
+            raise ServiceError(f"reinstall erases VM {vm}: also repeat it as confirm_destroy={vm}")
+        templates, keys = self.panel.templates(vm), self.panel.ssh_keys(vm)
+        if template not in templates:
+            raise ServiceError(f"unknown template {template!r}; one of: {', '.join(templates)}")
+        missing = [k for k in ssh_keys if k not in keys]
+        if missing:
+            raise ServiceError(f"unknown SSH key(s) {missing}; stored in the panel: {', '.join(keys)}")
+        self._audit(f"reinstall {vm} template={template} ssh_keys={','.join(ssh_keys)} requested")
+        r = self.panel.reinstall(vm, templates[template], [keys[k] for k in ssh_keys])
+        self._audit(f"reinstall {vm} -> {r}")
         return r
 
     def console_input(self, vm: str, text: str = "", keys: list[str] | None = None, confirm: str = "") -> dict:

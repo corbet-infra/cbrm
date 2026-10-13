@@ -27,11 +27,18 @@ do in the panel with their own login.
 | Console screenshot | `cbrm console <vm> out.png` | `GET /vms/{vm}/console.png` | `bero_console` | no |
 | Power: start, stop, shutdown, restart | `cbrm power <vm> <action> --confirm <vm>` | `POST /vms/{vm}/power` | `bero_power` | **yes** |
 | Console input: text and keys | `cbrm input <vm> --text … --key enter --confirm <vm>` | `POST /vms/{vm}/console/input` | `bero_console_input` | **yes** |
+| Installable templates, stored SSH keys | `cbrm templates <vm>`, `cbrm ssh-keys <vm>` | `GET /vms/{vm}/templates`, `/ssh-keys` | `bero_templates`, `bero_ssh_keys` | no |
+| Root password: show, set or generate | `cbrm root-password <vm> --confirm <vm>`, `cbrm set-root-password <vm> --confirm <vm>` | `POST /vms/{vm}/root-password/reveal`, `/root-password` | `bero_root_password`, `bero_set_root_password` | showing: audited; setting: **yes** |
+| Reinstall from a template, SSH keys baked in | `cbrm reinstall <vm> --template "Arch Linux" --ssh-key <name> --confirm <vm> --confirm-destroy <vm>` | `POST /vms/{vm}/reinstall` | `bero_reinstall` | **erases the disk** |
 
 Every changing operation repeats its target (`--confirm <vm>` / `confirm`) and is written to an audit
-log. **Not included on purpose**: reinstall, backups and restore, root password, network reset, ISO and
-boot order, renewals, upgrades and credit — they can destroy a server or cost money, so they stay in the
-panel where a person sees what they click.
+log (secrets never are). A reinstall erases the disk and therefore needs the target twice
+(`--confirm` and `--confirm-destroy`). Not included yet: backups and restore, network reset, ISO and
+boot order, renewals, upgrades and credit.
+
+A typical fresh start with your own operating system: `cbrm reinstall <vm> --template "Arch Linux"
+--ssh-key <your key> …`, wait until SSH answers with your key, then install what you like over SSH
+(for example with nixos-anywhere).
 
 ## Install
 

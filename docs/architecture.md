@@ -24,6 +24,8 @@ Every interface goes through `Service`, so a rule added there holds for the CLI,
 | Status | server-rendered product page | read the labelled values after `KVM Rootserver #<id>` |
 | Action log | a lazy Livewire component (`…logs-table`) | replay its `__lazyLoad` call with its own snapshot, parse the rendered rows |
 | Power | `GET /customer/rootserver/<vm>/{start,stop,shutdown,restart}` → JSON | the same request, `X-Requested-With: XMLHttpRequest` |
+| Root password | shown on the product page (`#password[data-password]`); set with `POST …/setrootpassword` | read the attribute; the same POST with the CSRF token |
+| Reinstall | `POST /customer/rootserver/<vm>/reinstall` with `template=<id>` and `ssh_keys[]=<id>` (ids from the reinstall form) | names → ids from the form, then the same POST |
 | Console | `/customer/rootserver/<vm>/vnc` embeds noVNC with `host`, `port` and a one-time `password` (a Proxmox VNC ticket) | read those three values |
 
 The panel shows times in Europe/Berlin; cbrm passes them through unchanged. `system` in the status is

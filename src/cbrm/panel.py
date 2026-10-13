@@ -57,6 +57,7 @@ class Panel:
             json.dump({c.name: c.value for c in self.http.cookies.jar}, f)
 
     def _login(self) -> None:
+        self.http.cookies.clear()  # a stale session cookie would shadow the new one
         form = HTMLParser(self.http.get("/login").text).css_first("form[action$='/login'] input[name=_token]")
         if form is None:
             raise PanelError("login form not found")
@@ -147,7 +148,42 @@ class Panel:
             raise PanelError(f"no console session offered for {vm}")
         return q["host"], int(q["port"]), q["password"]
 
+    def _form_token(self, html: str) -> str:
+        return HTMLParser(html).css_first("meta[name=csrf-token]").attributes["content"]
+
+    def templates(self, vm: str) -> dict[str, str]:
+        """Installable operating systems: name -> template id (from the reinstall form)."""
+        sel = HTMLParser(self._product_page(vm)).css_first("select#rootserverTemplate")
+        return {o.text().strip(): o.attributes["value"] for o in sel.css("option")}
+
+    def ssh_keys(self, vm: str) -> dict[str, str]:
+        """SSH keys stored in the panel account: name -> key id (selectable on reinstall)."""
+        nodes = HTMLParser(self._product_page(vm)).css("[id^=ssh_key_][data-id]")
+        # The tile shows the name, then the key's fingerprint: the name is the first line.
+        return {next(l.strip() for l in n.text().splitlines() if l.strip()): n.attributes["data-id"] for n in nodes}
+
+    def root_password(self, vm: str) -> str:
+        """The root password the panel shows for the VM (set at the last install or change)."""
+        node = HTMLParser(self._product_page(vm)).css_first("#password[data-password]")
+        if node is None:
+            raise PanelError(f"no root password shown for {vm}")
+        return node.attributes["data-password"]
+
     # -- changing ----------------------------------------------------------------------------
+    def _post_json(self, vm: str, action: str, data: dict) -> dict:
+        data = {"_token": self._form_token(self._product_page(vm)), **data}
+        r = self.http.post(f"/customer/rootserver/{vm}/{action}", data=data,
+                           headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
+        r.raise_for_status()
+        return r.json()
+
+    def set_root_password(self, vm: str, password: str) -> dict:
+        return self._post_json(vm, "setrootpassword", {"password": password, "password_confirmation": password})
+
+    def reinstall(self, vm: str, template_id: str, ssh_key_ids: list[str]) -> dict:
+        """Reinstalls the VM from a template: ERASES ITS DISK. The panel generates a new root password."""
+        return self._post_json(vm, "reinstall", {"template": template_id, "ssh_keys[]": list(ssh_key_ids)})
+
     def power(self, vm: str, action: str) -> dict:
         if action not in POWER_ACTIONS:
             raise PanelError(f"power action must be one of {POWER_ACTIONS}")

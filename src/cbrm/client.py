@@ -25,6 +25,15 @@ class Client:
     def console_png(self, vm): return self._do("GET", f"/vms/{vm}/console.png").content
     def power(self, vm, action, confirm):
         return self._do("POST", f"/vms/{vm}/power", json={"action": action, "confirm": confirm}).json()
+    def templates(self, vm): return self._do("GET", f"/vms/{vm}/templates").json()
+    def ssh_keys(self, vm): return self._do("GET", f"/vms/{vm}/ssh-keys").json()
+    def root_password(self, vm, confirm):
+        return self._do("POST", f"/vms/{vm}/root-password/reveal", json={"confirm": confirm}).json()
+    def set_root_password(self, vm, confirm, password=None):
+        return self._do("POST", f"/vms/{vm}/root-password", json={"confirm": confirm, "password": password}).json()
+    def reinstall(self, vm, template, ssh_keys, confirm, confirm_destroy):
+        return self._do("POST", f"/vms/{vm}/reinstall", json={"template": template, "ssh_keys": ssh_keys,
+                                                               "confirm": confirm, "confirm_destroy": confirm_destroy}).json()
     def console_input(self, vm, text="", keys=None, confirm=""):
         return self._do("POST", f"/vms/{vm}/console/input",
                         json={"text": text, "keys": keys or [], "confirm": confirm}).json()
