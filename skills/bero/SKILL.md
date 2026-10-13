@@ -1,0 +1,36 @@
+---
+name: bero
+description: Manage BERO HOST (bero-host.de) KVM rootservers — list VMs, read status and the panel's action log, look at the VNC console, power start/stop/restart, type into the console. Use when the user asks to check, restart or operate a BERO HOST server, or to see its console. Uses the cbrm tool (MCP server `cbrm-mcp` or CLI `cbrm`).
+---
+
+# BERO HOST with cbrm
+
+BERO HOST has no public API; `cbrm` speaks its customer panel and the panel's VNC console (Proxmox
+noVNC). Prefer the MCP tools (`bero_*`); the CLI `cbrm` has the same commands.
+
+## Rules
+
+1. **Read before you act.** `bero_status`, `bero_logs` and `bero_console` first; say what you see.
+2. **Changing tools repeat the target**: `confirm=<vm>`. Never change a VM the user did not name.
+3. **One VM at a time** in a cluster: check the others are healthy before stopping or restarting one.
+4. **`system` in the status is the last template BERO installed**, not proof of what runs. The
+   console and the action log tell the truth (e.g. "Rootserver installieren" = it was reinstalled).
+5. Typing into the console: screenshot, type, screenshot again; never type secrets you were not given
+   for that purpose.
+6. Not available on purpose: reinstall, backups/restore, root password, network reset, ISO/boot order,
+   renewals, upgrades, credit. Send the user to the panel for those.
+
+## Recipes
+
+| Need | Steps |
+|---|---|
+| Is the server up? | `bero_status` → `bero_console` (login prompt? kernel panic? initrd waiting for a disk key?) |
+| What happened to it? | `bero_logs` (panel time, Europe/Berlin): reinstalls, restarts, starts |
+| Hung server | `bero_console` → `bero_power(action="restart", confirm=vm)` → `bero_console` |
+| Act at the console | `bero_console` → `bero_console_input(text=..., keys=["enter"], confirm=vm)` → `bero_console` |
+
+## Setup
+
+`CBRM_USER` / `CBRM_PASSWORD`, or `CBRM_CREDENTIALS_CMD` (prints user and password on two lines, e.g.
+from a secret store), or `CBRM_API_URL` + `CBRM_API_TOKEN` to use a shared `cbrm serve`.
+Optional `CBRM_VMS="10001 10002"` limits everything to those VMs.

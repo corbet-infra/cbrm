@@ -1,0 +1,18 @@
+{
+  description = "cbrm — BERO HOST management: the customer panel and its VNC console";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  outputs = { self, nixpkgs }:
+    let forAll = f: nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] (s: f nixpkgs.legacyPackages.${s});
+    in {
+      packages = forAll (pkgs: rec {
+        cbrm = pkgs.python3Packages.buildPythonApplication {
+          pname = "cbrm"; version = "0.1.0"; pyproject = true; src = ./.;
+          build-system = [ pkgs.python3Packages.hatchling ];
+          dependencies = with pkgs.python3Packages; [ httpx selectolax websockets vncdotool pillow mcp fastapi uvicorn ];
+          nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
+          pythonImportsCheck = [ "cbrm" ];
+        };
+        default = cbrm;
+      });
+    };
+}
