@@ -75,8 +75,15 @@ class Service:
     def run(self, name: str, vm: str, args: dict | None = None, *, confirm: str | None = None,
             confirm_destroy: str | None = None, confirm_cost: str | None = None, dry_run: bool = False):
         """Run a feature. Returns its result (bytes for PNG features). Changing features return a dict with
-        `result` and `verified` (True, False, or None when there is no verification or it failed: then
-        `verify_error` says why). A dry run makes only reading requests and returns {"dry_run": True, "would": ...}."""
+        `result` and `verified`:
+
+          True   the re-read panel shows the effect
+          False  the re-read panel does not show the effect (look again before retrying)
+          None   unknown: the feature has no verification, its verification could not tell (it returned None,
+                 e.g. the panel hiccuped while re-reading), or it raised; then `verify_error` says why
+
+        None is never turned into False: "could not tell" and "does not show it" are different answers.
+        A dry run makes only reading requests and returns {"dry_run": True, "would": ...}."""
         f = self._feature(name)
         a = self._args(f, args or {})
         if self.allow and vm not in self.allow:
@@ -104,7 +111,8 @@ class Service:
         out = {"result": result, "verified": None}
         if f.verify:
             try:
-                out["verified"] = bool(f.verify(ctx, vm, result, **a))
+                v = f.verify(ctx, vm, result, **a)
+                out["verified"] = None if v is None else bool(v)  # None stays "unknown"
             except Exception as e:  # the change was sent: never report a verification problem as "not sent"
                 out["verify_error"] = f"{type(e).__name__}: {e}"
             self._audit(f"{f.name} {vm} verified={out['verified']}" + (f" ({out['verify_error']})" if "verify_error" in out else ""))
