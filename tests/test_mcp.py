@@ -5,4 +5,5 @@ import asyncio
 def test_tools_registered():
     from cbrm.mcp import mcp
     names = {t.name for t in asyncio.run(mcp.list_tools())}
-    assert names == {"bero_vms", "bero_status", "bero_logs", "bero_console", "bero_power", "bero_console_input"}
+    assert names == {"bero_vms", "bero_status", "bero_logs", "bero_console", "bero_power", "bero_console_input",
+                     "bero_templates", "bero_ssh_keys", "bero_root_password", "bero_set_root_password", "bero_reinstall"}

@@ -24,6 +24,17 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("vm"); s.add_argument("--text", default=""); s.add_argument("--key", action="append", default=[],
                                                                               help="vncdotool key name, repeatable")
     s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
+    sub.add_parser("templates", help="installable operating systems").add_argument("vm")
+    sub.add_parser("ssh-keys", help="SSH keys stored in the panel").add_argument("vm")
+    s = sub.add_parser("root-password", help="show the root password (audited)")
+    s.add_argument("vm"); s.add_argument("--confirm", required=True, metavar="VM")
+    s = sub.add_parser("set-root-password", help="set (or generate) the root password (changes the VM)")
+    s.add_argument("vm"); s.add_argument("--password", help="default: generate 24 characters")
+    s.add_argument("--confirm", required=True, metavar="VM")
+    s = sub.add_parser("reinstall", help="reinstall from a template: ERASES THE DISK")
+    s.add_argument("vm"); s.add_argument("--template", required=True, help="name as `cbrm templates` lists it")
+    s.add_argument("--ssh-key", action="append", default=[], help="name as `cbrm ssh-keys` lists it, repeatable")
+    s.add_argument("--confirm", required=True, metavar="VM"); s.add_argument("--confirm-destroy", required=True, metavar="VM")
     s = sub.add_parser("serve", help="run the HTTP API (needs CBRM_API_TOKEN)")
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
     a = p.parse_args(argv)
@@ -58,6 +69,16 @@ def main(argv: list[str] | None = None) -> None:
             out({"file": a.out}, a.out)
         elif a.cmd == "power":
             r = b.power(a.vm, a.action, a.confirm); out(r, r.get("message", json.dumps(r)))
+        elif a.cmd in ("templates", "ssh-keys"):
+            r = b.templates(a.vm) if a.cmd == "templates" else b.ssh_keys(a.vm)
+            out(r, "\n".join(r))
+        elif a.cmd == "root-password":
+            r = b.root_password(a.vm, a.confirm); out(r, r["root_password"])
+        elif a.cmd == "set-root-password":
+            r = b.set_root_password(a.vm, a.confirm, a.password); out(r, r["root_password"])
+        elif a.cmd == "reinstall":
+            r = b.reinstall(a.vm, a.template, a.ssh_key, a.confirm, a.confirm_destroy)
+            out(r, r.get("message", json.dumps(r)))
         elif a.cmd == "input":
             out(b.console_input(a.vm, a.text, a.key, a.confirm), "sent")
     except (ServiceError, PanelError) as e:

@@ -28,6 +28,22 @@ class PowerRequest(BaseModel):
     confirm: str
 
 
+class Confirm(BaseModel):
+    confirm: str
+
+
+class RootPassword(BaseModel):
+    confirm: str
+    password: str | None = None
+
+
+class Reinstall(BaseModel):
+    template: str
+    ssh_keys: list[str] = []
+    confirm: str
+    confirm_destroy: str
+
+
 class ConsoleInput(BaseModel):
     text: str = ""
     keys: list[str] = []
@@ -69,5 +85,25 @@ def create_app(service: Service) -> FastAPI:
     @app.post("/vms/{vm}/console/input")
     def console_input(vm: str, body: ConsoleInput) -> dict:
         return service.console_input(vm, body.text, body.keys, body.confirm)
+
+    @app.get("/vms/{vm}/templates")
+    def templates(vm: str) -> dict:
+        return service.templates(vm)
+
+    @app.get("/vms/{vm}/ssh-keys")
+    def ssh_keys(vm: str) -> dict:
+        return service.ssh_keys(vm)
+
+    @app.post("/vms/{vm}/root-password/reveal")
+    def root_password(vm: str, body: Confirm) -> dict:
+        return service.root_password(vm, body.confirm)
+
+    @app.post("/vms/{vm}/root-password")
+    def set_root_password(vm: str, body: RootPassword) -> dict:
+        return service.set_root_password(vm, body.confirm, body.password)
+
+    @app.post("/vms/{vm}/reinstall")
+    def reinstall(vm: str, body: Reinstall) -> dict:
+        return service.reinstall(vm, body.template, body.ssh_keys, body.confirm, body.confirm_destroy)
 
     return app
