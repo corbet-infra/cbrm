@@ -15,6 +15,7 @@ import pytest
 from cbrm.errors import ContractError, PanelError, ServiceError
 from cbrm.features import REGISTRY, account, common, tasks
 from cbrm.features.common import plain
+from cbrm.features.registry import RISKS, feature
 from cbrm.service import Service
 
 FIX = Path(__file__).parent / "fixtures"
@@ -213,7 +214,12 @@ NEW = {"addresses": "read", "backups": "read", "automatic-backup-status": "read"
 
 def test_risk_classes():
     assert {n: REGISTRY[n].risk for n in NEW} == NEW
-    assert not [n for n, f in REGISTRY.items() if f.risk == "cost" and n in NEW]
+
+
+def test_cbrm_has_no_way_to_spend_money():
+    assert "cost" not in RISKS and {f.risk for f in REGISTRY.values()} <= set(RISKS)
+    with pytest.raises(ValueError):
+        feature("pay", "cost", "would spend money")
 
 
 def test_account_wide_features_are_named_so():

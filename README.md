@@ -75,7 +75,6 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | secret | `--confirm <vm>`; audited without the value |
 | change | `--confirm <vm>`; audited; checked afterwards where the panel shows the effect (`verified`) |
 | destroy | `--confirm <vm>` and `--confirm-destroy <vm>`: erases or overwrites data, or acts later and repeatedly without you (`reinstall`, `backup-delete`, `backup-restore`, `network-reset`, `task-create`) |
-| cost | `--confirm <vm>` and `--confirm-cost <amount>` (none implemented yet) |
 
 `verified` is `true` when cbrm re-read the panel and it shows the effect, `false` when it does not (look again
 before repeating the change), and `null` when cbrm cannot tell: the panel shows no sign of the change to re-read
@@ -178,8 +177,8 @@ reinstall with SSH keys, own ISOs, CD drives, boot order and rescue system — a
 addresses and reverse DNS, network reset, backups (list, create, restore, delete, automatic-backup
 status), scheduled tasks, host name and product name, statistics (current and history), the account's SSH
 keys, and read-only renewal and credit information (runtime left, the prices the panel quotes, payment
-method, upgrade possible or not, balance). Planned: support tickets and — as the `cost` risk class — the
-paying actions: renewals, upgrades and credit top-ups. Restoring single files from a backup is not covered.
+method, upgrade possible or not, balance). Planned: support tickets. cbrm never spends money: renewals,
+upgrades and credit top-ups stay in the panel, by hand. Restoring single files from a backup is not covered.
 Issues and pull requests are welcome on the primary repository.
 
 ## How it works

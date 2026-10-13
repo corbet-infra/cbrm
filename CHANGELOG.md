@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- cbrm never spends money (decision of 2026-10-13): the planned `cost` risk class is gone, together with
+  `confirm_cost` in the library, `--confirm-cost` in the CLI, the HTTP API field and the MCP parameter.
+  `feature()` raises `ValueError` for any risk class other than read, secret, change and destroy (it was an
+  `assert`, which `python -O` skips). Renewals, upgrades and credit top-ups stay in the panel.
+
 ## 0.4.1 — 2026-10-13
 
 Fixes from a second independent review (the 0.4.0 features):

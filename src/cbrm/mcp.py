@@ -21,7 +21,7 @@ from .features import REGISTRY, Feature
 mcp = _Server("cbrm", instructions=(
     "Operate BERO HOST (bero-host.de) KVM rootservers through the customer panel and the VNC console. "
     "Read first. Every tool states its risk: change tools need confirm=<vm>, destroy tools also "
-    "confirm_destroy=<vm>, cost tools confirm_cost=<amount>. dry_run=true shows what would be sent. "
+    "confirm_destroy=<vm>. dry_run=true shows what would be sent. cbrm never spends money. "
     "A 'panel changed' error means BERO altered the panel and the change was not made; report it, do not work around it. "
     "bero_account_* tools act on the whole account (stored SSH keys, credit), not on one server: the VM allow-list "
     "does not limit them. "
@@ -47,14 +47,12 @@ def _tool(f: Feature):
         params.append(P("confirm", P.KEYWORD_ONLY, annotation=str))
     if f.risk == "destroy":
         params.append(P("confirm_destroy", P.KEYWORD_ONLY, annotation=str))
-    if f.risk == "cost":
-        params.append(P("confirm_cost", P.KEYWORD_ONLY, annotation=str))
     if f.risk != "read":
         params.append(P("dry_run", P.KEYWORD_ONLY, annotation=bool, default=False))
 
     async def tool(**kw):
         vm = kw.pop("vm")
-        opts = {k: kw.pop(k) for k in ("confirm", "confirm_destroy", "confirm_cost", "dry_run") if k in kw}
+        opts = {k: kw.pop(k) for k in ("confirm", "confirm_destroy", "dry_run") if k in kw}
         args = {k: v for k, v in kw.items() if v is not None}
         try:  # in a worker thread: panel and console calls block, the server must keep answering
             r = await anyio.to_thread.run_sync(lambda: b().run(f.name, vm, args, **opts))

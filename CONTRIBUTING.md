@@ -17,8 +17,8 @@ Without Nix: `python -m venv .venv && .venv/bin/pip install -e . pytest`.
 ## Ground rules
 
 - **A new operation is one `@feature` in `cbrm/features/`** with its risk class (`read`, `secret`,
-  `change`, `destroy`, `cost`), parameters, `run`, and where possible `verify` (re-read the effect) and
-  `check` (read-only contract proof for `cbrm doctor`). CLI, API and MCP pick it up automatically; the
+  `change`, `destroy`; there is no class for spending money, and none will be added), parameters, `run`,
+  and where possible `verify` (re-read the effect) and `check` (read-only contract proof for `cbrm doctor`). CLI, API and MCP pick it up automatically; the
   service applies the confirmations. Run `python scripts/readme_features.py` to regenerate the README table.
 - **Check before you send**: use `Component.require(...)` / `Page.require_endpoint(...)` for everything
   the request relies on, and hand the one changing request to `ctx.send(description, fn)`.

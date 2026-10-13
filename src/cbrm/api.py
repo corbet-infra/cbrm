@@ -28,7 +28,6 @@ class RunRequest(BaseModel):
     args: dict = {}
     confirm: str | None = None
     confirm_destroy: str | None = None
-    confirm_cost: str | None = None
     dry_run: bool = False
 
 
@@ -83,6 +82,6 @@ def create_app(service: Service) -> FastAPI:
     @app.post("/vms/{vm}/{feature}")
     def run(vm: str, feature: str, body: RunRequest):
         return respond(service.run(feature, vm, body.args, confirm=body.confirm, confirm_destroy=body.confirm_destroy,
-                                   confirm_cost=body.confirm_cost, dry_run=body.dry_run))
+                                   dry_run=body.dry_run))
 
     return app
