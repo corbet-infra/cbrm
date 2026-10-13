@@ -40,8 +40,6 @@ def _parser() -> argparse.ArgumentParser:
             s.add_argument("--dry-run", action="store_true", help="read and check everything, change nothing, show the request")
         if f.risk == "destroy":
             s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased")
-        if f.risk == "cost":
-            s.add_argument("--confirm-cost", required=True, metavar="AMOUNT", help="the exact amount the panel quotes")
     return p
 
 
@@ -89,7 +87,7 @@ def main(argv: list[str] | None = None) -> None:
             f = REGISTRY[a.cmd]
             args = {p.name: getattr(a, p.name) for p in f.params if getattr(a, p.name) is not None}
             r = b.run(f.name, a.vm, args, confirm=getattr(a, "confirm", None),
-                      confirm_destroy=getattr(a, "confirm_destroy", None), confirm_cost=getattr(a, "confirm_cost", None),
+                      confirm_destroy=getattr(a, "confirm_destroy", None),
                       dry_run=getattr(a, "dry_run", False))
             if isinstance(r, bytes):
                 with open(a.out, "wb") as fh:

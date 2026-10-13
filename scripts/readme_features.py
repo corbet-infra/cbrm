@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 from cbrm.features import REGISTRY  # noqa: E402
 
-ORDER = {"read": 0, "secret": 1, "change": 2, "destroy": 3, "cost": 4}
+ORDER = {"read": 0, "secret": 1, "change": 2, "destroy": 3}
 rows = ["| Feature | Risk | Arguments | What it does |", "|---|---|---|---|"]
 for f in sorted(REGISTRY.values(), key=lambda f: (ORDER[f.risk], f.name)):
     args = [f"`--{p.name.replace('_', '-')}{' …' if p.multiple else ''}`" + ("" if p.required else "?") for p in f.params]

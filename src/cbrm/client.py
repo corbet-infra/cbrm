@@ -33,9 +33,9 @@ class Client:
     def vms(self): return self._do("GET", "/vms").json()
     def check(self, vm): return self._do("GET", f"/vms/{vm}/doctor").json()
 
-    def run(self, name, vm, args=None, *, confirm=None, confirm_destroy=None, confirm_cost=None, dry_run=False):
+    def run(self, name, vm, args=None, *, confirm=None, confirm_destroy=None, dry_run=False):
         r = self._do("POST", f"/vms/{vm}/{name}", json={"args": args or {}, "confirm": confirm, "confirm_destroy":
-                     confirm_destroy, "confirm_cost": confirm_cost, "dry_run": dry_run})
+                     confirm_destroy, "dry_run": dry_run})
         return r.content if r.headers.get("content-type", "").startswith("image/") else r.json()
 
 

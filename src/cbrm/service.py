@@ -64,18 +64,16 @@ class Service:
             out[p.name] = v
         return out
 
-    def _gate(self, f: Feature, vm: str, confirm, confirm_destroy, confirm_cost) -> None:
+    def _gate(self, f: Feature, vm: str, confirm, confirm_destroy) -> None:
         if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")
-        if f.risk in ("secret", "change", "destroy", "cost") and confirm != vm:
+        if f.risk in ("secret", "change", "destroy") and confirm != vm:
             raise ServiceError(f"{f.name} ({f.risk}) acts on VM {vm}: repeat it as confirm={vm}")
         if f.risk == "destroy" and confirm_destroy != vm:
             raise ServiceError(f"{f.name} destroys data on VM {vm}: also repeat it as confirm_destroy={vm}")
-        if f.risk == "cost" and not confirm_cost:
-            raise ServiceError(f"{f.name} costs money: confirm_cost must repeat the exact amount the panel quotes")
 
     def run(self, name: str, vm: str, args: dict | None = None, *, confirm: str | None = None,
-            confirm_destroy: str | None = None, confirm_cost: str | None = None, dry_run: bool = False):
+            confirm_destroy: str | None = None, dry_run: bool = False):
         """Run a feature. Returns its result (bytes for PNG features). Changing features return a dict with
         `result` and `verified`:
 
@@ -97,7 +95,7 @@ class Service:
             if not (isinstance(result, dict) and result.get("dry_run")):
                 raise ServiceError(f"{f.name} has no dry run")  # safety net: a dry run never returns real results
             return result
-        self._gate(f, vm, confirm, confirm_destroy, confirm_cost)
+        self._gate(f, vm, confirm, confirm_destroy)
         ctx = Ctx(self.panel)
         if f.risk == "read":
             return f.run(ctx, vm, **a)

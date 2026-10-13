@@ -5,7 +5,9 @@ from it, and `cbrm.service.Service.run` applies the same rules to every entry:
            secret   reveals a secret: confirm=<vm>, audited without the value
            change   confirm=<vm>, audited, verified afterwards where possible
            destroy  erases data: confirm=<vm> and confirm_destroy=<vm>
-           cost     spends money: confirm=<vm> and confirm_cost=<the exact amount the panel quotes>
+
+There is no risk class for spending money: cbrm never extends, upgrades or tops up anything (Julian's
+decision, 2026-10-13), and `feature()` refuses any risk not listed here.
 
 A feature's `run(ctx, vm, **args)` does all its reading and contract checks first and hands the one
 request that changes something to `ctx.send(description, fn)`: in a dry run that returns the
@@ -21,7 +23,7 @@ from ..errors import ServiceError
 from ..livewire import Page
 from ..panel import Panel
 
-RISKS = ("read", "secret", "change", "destroy", "cost")
+RISKS = ("read", "secret", "change", "destroy")
 
 
 @dataclass(frozen=True)
@@ -54,7 +56,8 @@ REGISTRY: dict[str, Feature] = {}
 
 def feature(name: str, risk: str, help: str, params: tuple[Param, ...] = (), returns: str = "json",
             secret_result: bool = False, verify: Callable | None = None, check: Callable | None = None):
-    assert risk in RISKS, risk
+    if risk not in RISKS:  # not an assert: python -O must not let a paying or unknown class through
+        raise ValueError(f"{name}: unknown risk class {risk!r}")
 
     def register(fn: Callable) -> Callable:
         REGISTRY[name] = Feature(name, risk, help, fn, params, verify, check, returns, secret_result)

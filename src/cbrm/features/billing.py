@@ -1,5 +1,5 @@
-"""Runtime, renewal prices and credit: reading only. Paying actions (extending, upgrading, topping up credit)
-are not part of cbrm yet; they will be `cost` features that need the exact amount the panel quotes."""
+"""Runtime, renewal prices and credit: reading only. cbrm never pays: extending, upgrading and topping up
+credit stay in the panel, by hand (Julian's decision, 2026-10-13)."""
 from __future__ import annotations
 
 import math
