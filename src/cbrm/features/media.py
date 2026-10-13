@@ -23,11 +23,18 @@ def _rows(comp, button: str) -> list[dict]:
     return out
 
 
+def _live(ctx, vm, name: str, refresh: str):
+    """A component after its refresh method ran: the panel caches drives and boot order and shows the
+    hypervisor's state only after the (hidden) Update button's method."""
+    comp = ctx.product_page(vm).component(name)
+    return comp._send({}, [(refresh, [])]) if comp.offers(refresh) else comp
+
+
 # -- reading -----------------------------------------------------------------------------------------
 
-@feature("drives", "read", "The VM's CD drives and what is inserted")
+@feature("drives", "read", "The VM's CD drives and what is inserted (live state from the hypervisor)")
 def _drives(ctx, vm):
-    comp = ctx.product_page(vm).component("drive")
+    comp = _live(ctx, vm, "drive", "updateDrivesContent")
     out = []
     for node in comp.tree.css("[wire\\:key^='existingDriveFromRootserver']"):
         lines = [l.strip() for l in node.text(separator="\n").splitlines() if l.strip()]
@@ -67,7 +74,7 @@ def _rescue(ctx, vm):
 
 @feature("boot-order", "read", "Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network)")
 def _boot_order(ctx, vm):
-    comp = ctx.product_page(vm).component("boot")
+    comp = _live(ctx, vm, "boot", "updateBootOrderContent")
     items = [{"key": n.attributes["data-bootkey"], "label": " ".join(n.text(separator=" ").split())}
              for n in comp.tree.css("[data-bootkey]")]
     if not items:
@@ -90,8 +97,11 @@ def _drive_content(ctx, vm, drive) -> str:
 
 
 def _verify_mount(ctx, vm, result, drive, iso):
+    """Only the exact file counts: the panel reports success even when an own ISO has not finished
+    downloading, and then nothing is inserted."""
+    want = result["mounted"]["file"]
     for _ in range(12):
-        if _drive_content(ctx, vm, drive):
+        if want in _drive_content(ctx, vm, drive):
             return True
         time.sleep(5)
     return False

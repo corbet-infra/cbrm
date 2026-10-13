@@ -97,3 +97,14 @@ def test_a_changed_panel_stops_before_sending(tmp_path):
     assert svc.panel.calls == []
     report = svc.check("1")
     assert report["boot-order-set"].startswith("BROKEN") and report["iso-unmount"].startswith("BROKEN")
+
+
+def test_mount_counts_only_the_exact_file(tmp_path, monkeypatch):
+    """The panel reports success for an own ISO that has not finished downloading; nothing is inserted."""
+    from cbrm.features import media
+    from cbrm.features.registry import Ctx
+    monkeypatch.setattr(media.time, "sleep", lambda s: None)
+    ctx = Ctx(FakePanel(tmp_path))
+    assert media._verify_mount(ctx, "1", {"mounted": {"file": "nixos-installer.iso"}}, "ide2", "x")
+    assert not media._verify_mount(ctx, "1", {"mounted": {"file": "other.iso"}}, "ide2", "x")
+    assert not media._verify_mount(ctx, "1", {"mounted": {"file": "nixos-installer.iso"}}, "ide0", "x")
