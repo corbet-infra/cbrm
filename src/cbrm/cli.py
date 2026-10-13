@@ -21,11 +21,11 @@ def _parser() -> argparse.ArgumentParser:
     s = sub.add_parser("serve", help="run the HTTP API (needs CBRM_API_TOKEN)")
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
     for f in REGISTRY.values():
-        s = sub.add_parser(f.name, help=f"[{f.risk}] {f.help}")
+        s = sub.add_parser(f.name, help=f"[{f.risk}] {f.help}".replace("%", "%%"))  # argparse formats help
         s.add_argument("vm")
         for prm in f.params:
             opt = "--" + prm.name.replace("_", "-")
-            kw = {"help": prm.help, "dest": prm.name, "type": prm.type}
+            kw = {"help": prm.help.replace("%", "%%"), "dest": prm.name, "type": prm.type}
             if prm.multiple:
                 kw.update(nargs="+", default=None)
             if prm.choices:

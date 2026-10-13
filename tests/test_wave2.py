@@ -400,7 +400,7 @@ def test_ssh_key_import_shows_the_form_then_sends_name_and_key(svc):
                                        ("ssh-keys", {"importSshKeyName": "ci", "importSshKeyPublicKey": key}, [("importSshKey", [])])]
     assert r["result"]["fingerprint"] == fingerprint(key)
     audit = svc.audit_path.read_text()
-    assert key.split()[1] not in audit and "***" in audit  # the key parameter is secret: only "given" is logged
+    assert key.split()[1] not in audit and "<given>" in audit  # the key parameter is secret: only "given" is logged
 
 
 def test_ssh_key_import_is_verified_by_fingerprint_and_name(svc):
