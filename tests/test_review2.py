@@ -389,3 +389,28 @@ def test_features_without_a_visible_effect_do_not_claim_to_be_verified(svc, name
     assert REGISTRY[name].verify is None
     r = svc.run(name, "1", args, confirm="1", confirm_destroy="1")
     assert r["verified"] is None and "verify_error" not in r
+
+
+# -- 8: network-reset posts what the page's own input fields hold, and only if they are empty -----------------
+
+@pytest.mark.parametrize("attribute", ['value="hunter2-luks"', "value=hunter2-luks"])
+def test_network_reset_refuses_inputs_that_are_not_empty_without_echoing_them(tmp_path, attribute):
+    page = PRODUCT.replace('id="changeRootpasswordPassword"', f'id="changeRootpasswordPassword" {attribute}')
+    assert page != PRODUCT
+    svc = svc_for(tmp_path, page)
+    for dry in (True, False):
+        with pytest.raises(ContractError) as e:
+            svc.run("network-reset", "1", {}, dry_run=dry, **({} if dry else {"confirm": "1", "confirm_destroy": "1"}))
+        assert "hunter2" not in str(e.value)
+    assert sent_nothing(svc)
+    assert svc.check("1")["network-reset"].startswith("BROKEN")
+
+
+def test_network_reset_sends_the_values_of_the_inputs_it_found(svc):
+    r = svc.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")
+    assert svc.panel.http.forms == [("/customer/rootserver/1/resetnetwork", {"_token": "TOKEN", "password": "",
+                                                                             "password_confirmation": ""})]
+    explicit = svc_for(svc.panel.state_dir, PRODUCT.replace('id="changeRootpasswordPasswordConfirmation"',
+                                                            'id="changeRootpasswordPasswordConfirmation" value=""'))
+    explicit.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")
+    assert explicit.panel.http.forms == svc.panel.http.forms and r["verified"] is None

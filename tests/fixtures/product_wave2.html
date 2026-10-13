@@ -176,6 +176,20 @@
 </div>
 
 
+<div class="modal fade" id="changeRootpasswordModal" tabindex="-1" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-body">
+                <input type="password" class="form-control bero-form-bg-grey" id="changeRootpasswordPassword"
+                       autocomplete="new-password">
+                <input type="password" class="form-control bero-form-bg-grey" id="changeRootpasswordPasswordConfirmation"
+                       autocomplete="new-password">
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
     function resetNetwork() {
         $.post('https://bero-host.de/customer/rootserver/1/resetnetwork', {

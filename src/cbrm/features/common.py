@@ -63,13 +63,19 @@ def timestamp(s: str | None) -> str | None:
 
 # -- contract checks -------------------------------------------------------------------------------------
 
-def require_post(page: Page, path: str, *fields: str) -> None:
-    """The page's own script still POSTs exactly these fields (besides `_token`) to exactly this path."""
+def post_body(page: Page, path: str) -> str | None:
+    """The object literal the page's own `$.post(<path>, {…}, function …)` sends, or None if there is no such call."""
     m = re.search(r"\$\.post\(\s*'(?:https?://[^'/]+)?" + re.escape(path) + r"'\s*,\s*\{(.*?)\}\s*,\s*function",
                   page.html, re.S)
-    if m is None:
+    return None if m is None else m.group(1)
+
+
+def require_post(page: Page, path: str, *fields: str) -> None:
+    """The page's own script still POSTs exactly these fields (besides `_token`) to exactly this path."""
+    body = post_body(page, path)
+    if body is None:
         raise ContractError(f"{page.path}: the panel no longer posts to {path}")
-    keys = set(re.findall(r"(?m)(?:^|[{,])\s*([A-Za-z_]\w*)\s*:", m.group(1)))
+    keys = set(re.findall(r"(?m)(?:^|[{,])\s*([A-Za-z_]\w*)\s*:", body))
     if keys != set(fields) | {"_token"}:
         raise ContractError(f"{page.path}: the panel's post to {path} sends {sorted(keys - {'_token'})}, "
                             f"cbrm sends {sorted(fields)}")
