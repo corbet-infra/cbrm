@@ -2,6 +2,7 @@
 
 The panel limits the number of backups per VM and shows one 'Neues Backup' tile per free slot. A backup's
 id is the number in its tile's buttons; create, restore and delete are the endpoints those buttons call.
+A tile without exactly one such id is a ContractError: cbrm never works with a backup it cannot name.
 """
 from __future__ import annotations
 
@@ -22,6 +23,8 @@ def _read(comp) -> dict:
     for node in comp.tree.css(".rootserver-backup-item"):
         html = node.html
         ids = set(re.findall(r"show(?:Delete|Recreate)BackupModal\((\d+)\)", html))
+        if not ids:
+            raise ContractError("backup: a backup tile whose restore and delete buttons carry no id")
         if len(ids) > 1:
             raise ContractError("backup: the restore and delete buttons of a backup name different ids")
         title = node.css_first("h3 span")
@@ -31,7 +34,7 @@ def _read(comp) -> dict:
         for p in node.css("p.rootserver-backup-p"):
             label, _, val = text(p).partition(":")
             facts[label.strip()] = val.strip()
-        items.append({"id": ids.pop() if ids else None, "title": text(title), "size": facts.get("Größe"),
+        items.append({"id": ids.pop(), "title": text(title), "size": facts.get("Größe"),
                       "date": panel_date(facts.get("Datum"))})
     free = len(comp.tree.css(".rootserver-backup-item-new"))
     if not items and not free:
@@ -40,14 +43,14 @@ def _read(comp) -> dict:
 
 
 def _backup_ids(ctx, vm) -> list[str]:
-    return [b["id"] for b in _read(_component(ctx, vm))["backups"] if b["id"]]
+    return [b["id"] for b in _read(_component(ctx, vm))["backups"]]
 
 
 def _pick(ctx, vm, backup: str) -> dict:
     items = _read(_component(ctx, vm))["backups"]
     found = [b for b in items if b["id"] == str(backup)]
     if not found:
-        raise ServiceError(f"VM {vm} has no backup {backup!r}; it has {[b['id'] for b in items if b['id']]}")
+        raise ServiceError(f"VM {vm} has no backup {backup!r}; it has {[b['id'] for b in items]}")
     return found[0]
 
 
@@ -91,17 +94,34 @@ def _automatic_backup_status(ctx, vm):
 _check_create = _check("create", post=("title",))
 
 
+@tolerant
+def _verify_create(ctx, vm, result, title):
+    """True only when the panel now shows a backup that was not there before or one free slot less; False when
+    it does not (yet) or answered that it failed; None when it could not be read."""
+    if not ok(result):
+        return False
+
+    def appeared():
+        ctx.fresh(vm)
+        now = _read(_component(ctx, vm))
+        return (any(b["id"] not in result["known_ids"] for b in now["backups"])
+                or now["free_slots"] == result["free_slots"] - 1)
+    return settle(appeared)
+
+
 @feature("backup-create", "change", "Create a backup now (the panel makes it in the background; needs a free slot, see `backups`)",
-         (Param("title", "the backup's name"),), verify=lambda ctx, vm, result, title: ok(result),
-         check=_check_create)
+         (Param("title", "the backup's name"),), verify=_verify_create, check=_check_create)
 def _backup_create(ctx, vm, title):
     page = _check_create(ctx, vm)
     lo, hi = limits(page, "#new_backup_name", "the backup name field")
     title = clean(title, "title", lo, hi)
-    if _read(page.component("backup"))["free_slots"] < 1:
+    before = _read(page.component("backup"))
+    if before["free_slots"] < 1:
         raise ServiceError(f"VM {vm} has no free backup slot; delete a backup first (`backups`)")
     path = f"/customer/rootserver/{vm}/backup/create"
-    return ctx.send(f"POST {path} title={title!r}", lambda: panel_answer(post_form(ctx, page, path, {"title": title})))
+    return ctx.send(f"POST {path} title={title!r}",
+                    lambda: {**panel_answer(post_form(ctx, page, path, {"title": title})),
+                             "known_ids": [b["id"] for b in before["backups"]], "free_slots": before["free_slots"]})
 
 
 @tolerant
@@ -134,7 +154,7 @@ def _restore_contract(ctx, vm):
          (Param("backup", "the backup's id from `backups`"),
           Param("live", "yes: the VM starts at once while the data is restored in the background (the panel's "
                         "default); no: it is restored first", choices=("yes", "no"), required=False, default="yes")),
-         verify=lambda ctx, vm, result, backup, live: ok(result), check=_restore_contract)
+         check=_restore_contract)  # no verify: the restore runs in the background and leaves no sign to re-read
 def _backup_restore(ctx, vm, backup, live="yes"):
     _restore_contract(ctx, vm)
     found = _pick(ctx, vm, backup)

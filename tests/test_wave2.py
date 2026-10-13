@@ -280,9 +280,10 @@ def test_network_reset_posts_what_the_panels_button_posts(svc):
     r = svc.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")
     assert svc.panel.http.forms == [("/customer/rootserver/1/resetnetwork", {"_token": "TOKEN", "password": "",
                                                                              "password_confirmation": ""})]
-    assert r["verified"] is True
+    assert r["verified"] is None and r["result"]["state"] == "success"  # nothing to re-read: not "verified"
     svc.panel.http.answers["/customer/rootserver/1/resetnetwork"] = {"state": "failed", "message": "no"}
-    assert svc.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")["verified"] is False
+    r = svc.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")
+    assert r["verified"] is None and r["result"] == {"state": "failed", "message": "no"}
 
 
 def test_hostname_set_posts_and_verifies(svc):
@@ -315,6 +316,8 @@ def test_rename_uses_the_panels_own_limits(svc):
 
 
 def test_backup_create_needs_a_free_slot_and_posts_the_title(tmp_path, svc):
+    svc.panel.http.hooks["/customer/rootserver/1/backup/create"] = lambda: svc.panel.pages.__setitem__(
+        P, with_second_backup(PRODUCT))
     r = svc.run("backup-create", "1", {"title": "before upgrade"}, confirm="1")
     assert svc.panel.http.forms == [("/customer/rootserver/1/backup/create", {"_token": "TOKEN", "title": "before upgrade"})]
     assert r["verified"] is True
@@ -324,6 +327,16 @@ def test_backup_create_needs_a_free_slot_and_posts_the_title(tmp_path, svc):
     with pytest.raises(ServiceError):
         full.run("backup-create", "1", {"title": "one too many"}, confirm="1")
     assert sent_nothing(full)
+
+
+def with_second_backup(page: str) -> str:
+    """The product page after a backup was created: a second backup tile (id 9002) in place of one 'new backup' tile."""
+    item = re.search(r'<div class="rootserver-backup-container rootserver-backup-item p-4">.*?(?=\s*<!--\[if ENDBLOCK\]>'
+                     r'<!\[endif\]-->\s*<!--\[if BLOCK\]><!\[endif\]-->\s*<div class="rootserver-backup-container '
+                     r'rootserver-backup-item-new)', page, re.S).group(0)
+    page = page.replace(item, item + item.replace("9001", "9002").replace("Geplantes Backup", "before upgrade"))
+    return re.sub(r'<div class="rootserver-backup-container rootserver-backup-item-new.*?</div>\s*</div>', "", page,
+                  count=1, flags=re.S)
 
 
 def test_backup_delete_only_known_ids_and_verified_by_rereading(svc):
