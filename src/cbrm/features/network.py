@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 
 from ..errors import ContractError, ServiceError
-from .common import dns_name, panel_answer, post_form, require_element, require_post, settle, tolerant, value
+from .common import dns_name, panel_answer, post_body, post_form, require_element, require_post, settle, tolerant, value
 from .registry import Param, feature
 
 
@@ -80,14 +81,35 @@ def _rdns_set(ctx, vm, address, name):
 
 # -- network reset ------------------------------------------------------------------------------------
 
+# The panel's reset script copies the root-password form: it posts what is in these two input fields. cbrm
+# sends exactly what those fields hold on the page, and only if both are there and empty.
+RESET_INPUTS = {"password": "changeRootpasswordPassword", "password_confirmation": "changeRootpasswordPasswordConfirmation"}
+
+
+def _reset_fields(page, path) -> dict[str, str]:
+    body = post_body(page, path) or ""
+    fields = {}
+    for field, ident in RESET_INPUTS.items():
+        read = re.search(r"(?m)(?:^|[{,])\s*" + field + r"\s*:\s*document\.getElementById\('([^']*)'\)\.value", body)
+        if read is None or read.group(1) != ident:
+            raise ContractError(f"{page.path}: the panel's reset script no longer reads '{field}' from #{ident}")
+        node = require_element(page, f"#{ident}", f"the input #{ident} that the panel's reset script reads")
+        if node.tag != "input":
+            raise ContractError(f"{page.path}: #{ident} is no longer an input field")
+        fields[field] = node.attributes.get("value") or ""
+        if fields[field] != "":  # not echoed: it could be a password
+            raise ContractError(f"{page.path}: #{ident} is not empty, so the panel's reset would post something else "
+                                "than cbrm expects")
+    return fields
+
+
 def _check_reset(ctx, vm):
     page = ctx.product_page(vm)
     path = f"/customer/rootserver/{vm}/resetnetwork"
     page.require_endpoint(path)
-    # The panel's script copies the root-password form: it posts two (empty) password fields along.
-    require_post(page, path, "password", "password_confirmation")
+    require_post(page, path, *RESET_INPUTS)
     require_element(page, "#networkResetModal", "the network reset dialog")
-    return page, path
+    return page, path, _reset_fields(page, path)
 
 
 @feature("network-reset", "destroy",
@@ -95,6 +117,7 @@ def _check_reset(ctx, vm):
          "everything you configured there is lost",
          check=_check_reset)  # no verify: the panel shows no sign of a network reset to re-read
 def _network_reset(ctx, vm):
-    page, path = _check_reset(ctx, vm)
-    return ctx.send(f"POST {path} password='' password_confirmation='' (as the panel's own button does)",
-                    lambda: panel_answer(post_form(ctx, page, path, {"password": "", "password_confirmation": ""})))
+    page, path, fields = _check_reset(ctx, vm)
+    return ctx.send(f"POST {path} password={fields['password']!r} password_confirmation={fields['password_confirmation']!r} "
+                    "(what the panel's own button posts: the two empty password fields of its page)",
+                    lambda: panel_answer(post_form(ctx, page, path, fields)))
