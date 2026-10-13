@@ -9,12 +9,12 @@ from dataclasses import replace
 
 import pytest
 
-from cbrm.errors import ContractError, ServiceError
-from cbrm.features import account, common, registry
+from cbrm.errors import ContractError, PanelError, ServiceError
+from cbrm.features import REGISTRY, account, common, registry
 from cbrm.service import Service
 
 import test_service
-from test_wave2 import ACCOUNT, PRODUCT, fingerprint, make_key, sent_nothing, svc_for
+from test_wave2 import ACCOUNT, P, PRODUCT, fingerprint, make_key, sent_nothing, svc_for
 
 
 @pytest.fixture
@@ -318,3 +318,74 @@ def test_a_refused_key_never_reaches_the_panel(svc):
         with pytest.raises(ServiceError):
             svc.run("account-ssh-key-import", "1", {"name": "ci", "public_key": BAD[which]}, confirm="1")
     assert sent_nothing(svc)
+
+
+# -- 5: a backup tile without exactly one id is a contract error --------------------------------------------
+
+NO_ID = PRODUCT.replace("showRecreateBackupModal(9001)", "restore()").replace("showDeleteBackupModal(9001)", "remove()")
+TWO_IDS = PRODUCT.replace("showRecreateBackupModal(9001)", "showRecreateBackupModal(9002)")
+
+
+@pytest.mark.parametrize("page", [NO_ID, TWO_IDS], ids=["no id", "two ids"])
+def test_a_backup_tile_without_exactly_one_id_is_a_contract_error(tmp_path, page):
+    assert page != PRODUCT
+    svc = svc_for(tmp_path, page)
+    with pytest.raises(ContractError):
+        svc.run("backups", "1")
+    for name, args in (("backup-create", {"title": "backup"}), ("backup-delete", {"backup": "9001"}),
+                       ("backup-restore", {"backup": "9001"})):
+        with pytest.raises(ContractError):  # even a dry run
+            svc.run(name, "1", args, dry_run=True)
+    assert sent_nothing(svc)
+    report = svc.check("1")
+    assert all(report[n].startswith("BROKEN") for n in ("backups", "backup-create", "backup-delete", "backup-restore"))
+
+
+# -- 2: backup-create is verified by re-reading; restore and network reset claim nothing -----------------------
+
+ITEM = re.compile(r'<div class="rootserver-backup-container rootserver-backup-item p-4">.*?(?=\s*<!--\[if ENDBLOCK\]>'
+                  r'<!\[endif\]-->\s*<!--\[if BLOCK\]><!\[endif\]-->\s*<div class="rootserver-backup-container '
+                  r'rootserver-backup-item-new)', re.S)
+NEW_TILE = re.compile(r'<div class="rootserver-backup-container rootserver-backup-item-new.*?</div>\s*</div>', re.S)
+
+
+def one_more_backup(page):  # a new backup appeared, the number of free slots is the same
+    item = ITEM.search(page).group(0)
+    return page.replace(item, item + item.replace("9001", "9002"))
+
+
+def one_slot_less(page):  # a slot is used, no new backup is listed (yet)
+    return NEW_TILE.sub("", page, count=1)
+
+
+CREATE = "/customer/rootserver/1/backup/create"
+
+
+@pytest.mark.parametrize("after,verified", [(one_more_backup, True), (one_slot_less, True), (lambda page: page, False)],
+                         ids=["a new backup", "one slot less", "nothing changed"])
+def test_backup_create_is_verified_only_when_the_panel_shows_the_backup(svc, after, verified):
+    assert after(PRODUCT) != PRODUCT or verified is False
+    svc.panel.http.hooks[CREATE] = lambda: svc.panel.pages.__setitem__(P, after(PRODUCT))
+    r = svc.run("backup-create", "1", {"title": "before upgrade"}, confirm="1")
+    assert r["verified"] is verified and "verify_error" not in r
+
+
+def test_backup_create_is_not_verified_when_the_panel_says_it_failed(svc):
+    svc.panel.http.answers[CREATE] = {"state": "failed", "message": "no"}
+    svc.panel.http.hooks[CREATE] = lambda: svc.panel.pages.__setitem__(P, one_more_backup(PRODUCT))
+    assert svc.run("backup-create", "1", {"title": "backup"}, confirm="1")["verified"] is False
+
+
+def test_backup_create_verification_is_unknown_when_the_panel_cannot_be_read_afterwards(svc):
+    def broken(path):
+        raise PanelError("GET: the panel hiccuped")
+    svc.panel.http.hooks[CREATE] = lambda: setattr(svc.panel, "page", broken)
+    r = svc.run("backup-create", "1", {"title": "backup"}, confirm="1")
+    assert r["verified"] is None and "verify_error" not in r  # unknown, not "failed", and not an error either
+
+
+@pytest.mark.parametrize("name,args", [("backup-restore", {"backup": "9001"}), ("network-reset", {})])
+def test_features_without_a_visible_effect_do_not_claim_to_be_verified(svc, name, args):
+    assert REGISTRY[name].verify is None
+    r = svc.run(name, "1", args, confirm="1", confirm_destroy="1")
+    assert r["verified"] is None and "verify_error" not in r

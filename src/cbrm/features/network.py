@@ -4,7 +4,7 @@ from __future__ import annotations
 import ipaddress
 
 from ..errors import ContractError, ServiceError
-from .common import dns_name, ok, panel_answer, post_form, require_element, require_post, settle, tolerant, value
+from .common import dns_name, panel_answer, post_form, require_element, require_post, settle, tolerant, value
 from .registry import Param, feature
 
 
@@ -93,7 +93,7 @@ def _check_reset(ctx, vm):
 @feature("network-reset", "destroy",
          "Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): "
          "everything you configured there is lost",
-         verify=lambda ctx, vm, result: ok(result), check=_check_reset)
+         check=_check_reset)  # no verify: the panel shows no sign of a network reset to re-read
 def _network_reset(ctx, vm):
     page, path = _check_reset(ctx, vm)
     return ctx.send(f"POST {path} password='' password_confirmation='' (as the panel's own button does)",
