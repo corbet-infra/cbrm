@@ -13,3 +13,6 @@ dependencies = ["httpx>=0.27", "selectolax>=0.3.21", "websockets>=12", "vncdotoo
 [project.scripts]
 cbrm = "cbrm.cli:main"
 cbrm-mcp = "cbrm.mcp:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
