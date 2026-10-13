@@ -8,8 +8,8 @@ from __future__ import annotations
 import re
 
 from ..errors import ContractError, ServiceError
-from .common import (clean, get_json, limits, ok, panel_date, post_form, require_post, settle, text, timestamp,
-                     tolerant, value)
+from .common import (clean, get_json, limits, ok, panel_answer, panel_date, post_form, require_post, settle, text,
+                     timestamp, tolerant, value)
 from .registry import Param, feature
 
 
@@ -101,7 +101,7 @@ def _backup_create(ctx, vm, title):
     if _read(page.component("backup"))["free_slots"] < 1:
         raise ServiceError(f"VM {vm} has no free backup slot; delete a backup first (`backups`)")
     path = f"/customer/rootserver/{vm}/backup/create"
-    return ctx.send(f"POST {path} title={title!r}", lambda: post_form(ctx, page, path, {"title": title}))
+    return ctx.send(f"POST {path} title={title!r}", lambda: panel_answer(post_form(ctx, page, path, {"title": title})))
 
 
 @tolerant
@@ -118,7 +118,7 @@ def _backup_delete(ctx, vm, backup):
     _check_delete(ctx, vm)
     found = _pick(ctx, vm, backup)
     path = f"/customer/rootserver/{vm}/backup/delete/{found['id']}"
-    return ctx.send(f"GET {path} [{found['title']}, {found['date']}]", lambda: get_json(ctx, path))
+    return ctx.send(f"GET {path} [{found['title']}, {found['date']}]", lambda: panel_answer(get_json(ctx, path)))
 
 
 _check_restore = _check("restore/")
@@ -141,4 +141,4 @@ def _backup_restore(ctx, vm, backup, live="yes"):
     path = f"/customer/rootserver/{vm}/backup/restore/{found['id']}"
     params = {"liverestore": "1" if live == "yes" else "0"}
     return ctx.send(f"GET {path}?liverestore={params['liverestore']} [{found['title']}, {found['date']}]",
-                    lambda: get_json(ctx, path, params))
+                    lambda: panel_answer(get_json(ctx, path, params)))

@@ -1,7 +1,7 @@
 """Names: the VM's host name and the product's display name."""
 from __future__ import annotations
 
-from .common import clean, dns_name, limits, ok, post_form, require_element, require_post, text, tolerant
+from .common import clean, dns_name, limits, ok, panel_answer, post_form, require_element, require_post, text, tolerant
 from .registry import Param, feature
 
 
@@ -28,7 +28,8 @@ def _hostname_set(ctx, vm, hostname):
     hostname = dns_name(hostname, "hostname", lo, min(hi, 253))
     before = text(require_element(page, "#hostname", "the host name display"))
     return ctx.send(f"POST {path} hostname={hostname!r} (was {before!r})",
-                    lambda: {**post_form(ctx, page, path, {"hostname": hostname}), "wanted": hostname, "was": before})
+                    lambda: {**panel_answer(post_form(ctx, page, path, {"hostname": hostname})), "wanted": hostname,
+                              "was": before})
 
 
 def _check_rename(ctx, vm):
@@ -54,4 +55,5 @@ def _rename(ctx, vm, name):
     name = clean(name, "name", lo, hi)
     before = text(require_element(page, "#displayname", "the product name display"))
     return ctx.send(f"POST {path} displayname={name!r} (was {before!r})",
-                    lambda: {**post_form(ctx, page, path, {"displayname": name}), "wanted": name, "was": before})
+                    lambda: {**panel_answer(post_form(ctx, page, path, {"displayname": name})), "wanted": name,
+                              "was": before})

@@ -10,12 +10,23 @@ from .common import account_page, require_element, text, value
 from .registry import feature
 
 
+# What the panel prints for the payment: "42,00 € via PayPal (<the payer's account, an e-mail address>)". Only
+# the amount and the method's name are kept; the method is plain words (no digits, '@' or dots: nothing that
+# could identify an account), whatever follows is dropped, and a line in another shape yields no payment.
+_PAYMENT = re.compile(r"^\s*(?P<amount>-?[\d.]*\d,\d{2}\s*€)\s+via\s+"
+                      r"(?P<method>[^\W\d_]{1,30}(?:[ -][^\W\d_]{1,30}){0,2})\s*(?:\(|$)")
+
+
 def _credit(page) -> dict:
     node = require_element(page, "#guthabenHeader", "the credit display")
     m = re.search(r"Guthaben\s+(-?[\d.]*\d,\d{2})\s*€", text(node))
     if m is None:
         raise ContractError(f"{page.path}: the credit display no longer reads 'Guthaben 0,00 €'")
-    return {"balance": f"{m.group(1)} €", "balance_eur": float(m.group(1).replace(".", "").replace(",", "."))}
+    try:
+        eur = float(m.group(1).replace(".", "").replace(",", "."))
+    except ValueError:
+        raise ContractError(f"{page.path}: the credit display holds a number cbrm cannot read") from None
+    return {"balance": f"{m.group(1)} €", "balance_eur": eur}
 
 
 def _switch(comp, selector: str):
@@ -39,8 +50,9 @@ def _auto_renew(comp) -> dict:
         if key and sibling is not None:
             out[key] = text(sibling)
     pay = next((text(n) for n in comp.tree.css(".col-12") if text(n).startswith("Zahlung:")), None)
-    if pay:  # the method only; the panel appends the account (an e-mail address) in parentheses
-        out["payment"] = re.sub(r"\s*\(.*\)", "", pay.removeprefix("Zahlung:")).strip()
+    paid = _PAYMENT.match(pay.removeprefix("Zahlung:")) if pay else None
+    if paid:  # amount and method name only: the panel appends the account (an e-mail address)
+        out["payment"] = f"{' '.join(paid['amount'].split())} via {paid['method']}"
     chosen = value(comp, "automaticRenewRuntimeId") if "automaticRenewRuntimeId" in comp.data else None
     for o in comp.tree.css("select#automaticRenewRuntimeSelect option"):
         m = re.match(r"(\d+) Tage\s*[–-]\s*(\S+ €)", text(o))
@@ -54,8 +66,9 @@ def _auto_renew(comp) -> dict:
 def _upgrade(comp) -> dict:
     note = text(comp.tree.root)
     if "feste Konfiguration" in note:
-        return {"possible": False, "note": note}
-    return {"possible": None, "note": note[:500]}  # a layout cbrm has not seen: shown as the panel says it
+        return {"possible": False, "note": "fixed configuration: this server cannot be changed"}
+    # A layout cbrm has not seen. cbrm's own words, not the component's text: that is the panel's to show.
+    return {"possible": None, "note": "the panel's upgrade section looks different than cbrm knows; see the panel"}
 
 
 @feature("renewal", "read", "Remaining runtime, automatic renewal (runtimes with the prices the panel quotes, payment method), "
@@ -65,7 +78,10 @@ def _renewal(ctx, vm):
     m = re.search(r"var secondsTillEnd = (-?[\d.]+);", page.html)
     if m is None:
         raise ContractError(f"{page.path}: the remaining runtime (secondsTillEnd) is gone from the page")
-    seconds = float(m.group(1))
+    try:
+        seconds = float(m.group(1))
+    except ValueError:
+        raise ContractError(f"{page.path}: the remaining runtime (secondsTillEnd) is not a number") from None
     return {"vm": vm, "remaining_days": math.floor(seconds / 86400) if seconds > 0 else 0,
             "remaining_seconds": int(seconds), "expired": seconds <= 0,
             "auto_renew": _auto_renew(page.component("automatic-renew")),
