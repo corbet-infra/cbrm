@@ -3,7 +3,7 @@
 
 Creating a task is a `destroy` feature on purpose: it does nothing now, but the panel then acts on its own, again
 and again, until the task is deleted: a stop or restart task keeps interrupting the VM, and a backup task may
-rotate or overwrite the backups. The panel's own list of tasks is the only place that shows them.
+rotate or overwrite the backups.
 """
 from __future__ import annotations
 

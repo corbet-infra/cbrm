@@ -512,7 +512,11 @@ def test_doctor_loads_each_page_once(svc):
 
 
 LAZY = ('<html><head><meta name="csrf-token" content="TOKEN"><script data-update-uri="https://bero-host.de/lw/update">'
-        '</script></head><body><div wire:snapshot=\'{"data":{},"memo":{"name":"customerarea.products.rootserver.backup"}}\' '
+        '</script></head><body><script>'
+        "$.post('https://bero-host.de/customer/rootserver/1/backup/create', {_token: 'T', title: t}, function (r) {});"
+        "$.getJSON('/customer/rootserver/1/backup/delete/' + id);"
+        "$.getJSON('/customer/rootserver/1/backup/restore/' + id + '?liverestore=1');"
+        '</script><div wire:snapshot=\'{"data":{},"memo":{"name":"customerarea.products.rootserver.backup"}}\' '
         'x-intersect="$wire.__lazyLoad(\'abc\')"></div></body></html>')
 
 
@@ -532,3 +536,14 @@ def test_doctor_loads_a_lazy_component_once(tmp_path):
     report = svc.check("1")
     assert svc.panel.calls.count(("livewire", "__lazyLoad")) == 1, svc.panel.calls
     assert report["backup-create"].startswith("BROKEN")  # the synthetic page has no tiles: reported, not crashed
+
+
+def test_a_console_session_with_a_port_that_is_not_a_number_is_a_contract_error(tmp_path, monkeypatch):
+    from cbrm.panel import Panel
+    panel = Panel("user", "password", state_dir=tmp_path)
+    page = '<iframe src="https://bero-host.de/novnc?host=h.example&port=%s&password=t"></iframe>'
+    monkeypatch.setattr(panel, "page", lambda path: page % "5900")
+    assert panel.console_session("1") == ("h.example", 5900, "t")
+    monkeypatch.setattr(panel, "page", lambda path: page % "5900x")
+    with pytest.raises(ContractError):
+        panel.console_session("1")
