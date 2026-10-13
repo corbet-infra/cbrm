@@ -1,16 +1,18 @@
 """Regression tests for the findings of the second independent review: each test here fails on the code
 as it was before the fix. The panel is mocked (no network), see test_wave2.py and test_service.py."""
 import base64
+import datetime
 import json
 import re
 import string
 import struct
+import zoneinfo
 from dataclasses import replace
 
 import pytest
 
 from cbrm.errors import ContractError, PanelError, ServiceError
-from cbrm.features import REGISTRY, account, common, registry
+from cbrm.features import REGISTRY, account, common, registry, tasks
 from cbrm.service import Service
 
 import test_service
@@ -414,3 +416,80 @@ def test_network_reset_sends_the_values_of_the_inputs_it_found(svc):
                                                             'id="changeRootpasswordPasswordConfirmation" value=""'))
     explicit.run("network-reset", "1", {}, confirm="1", confirm_destroy="1")
     assert explicit.panel.http.forms == svc.panel.http.forms and r["verified"] is None
+
+
+# -- 3: task-create acts later and repeatedly: destroying, never in the past, never twice --------------------
+
+NOW = datetime.datetime(2026, 10, 13, 12, 0)  # panel time
+TASK = {"action": "dump", "interval": "weekly", "start": "2026-10-14 13:50"}  # exactly the fixture's existing task
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    monkeypatch.setattr(tasks, "_panel_now", lambda: NOW)
+
+
+def test_task_create_is_a_destroying_feature_with_both_confirmations(svc):
+    f = REGISTRY["task-create"]
+    assert f.risk == "destroy" and "DESTROYING" in f.help and "repeatedly" in f.help
+    args = {"action": "restart", "interval": "weekly", "start": "2099-01-01 03:30"}
+    for confirmations in ({"confirm": "1"}, {"confirm_destroy": "1"}, {}):
+        with pytest.raises(ServiceError):
+            svc.run("task-create", "1", args, **confirmations)
+    assert sent_nothing(svc)
+    svc.run("task-create", "1", args, confirm="1", confirm_destroy="1")
+    assert len(svc.panel.http.forms) == 1
+
+
+def test_task_create_refuses_a_start_in_the_past(svc, clock):
+    for start in ("2026-10-13 11:59", "2026-10-13T11:59", "2025-01-01 00:00"):
+        for dry in (True, False):
+            with pytest.raises(ServiceError, match="in the past"):
+                svc.run("task-create", "1", {"action": "restart", "interval": "daily", "start": start}, dry_run=dry,
+                        **({} if dry else {"confirm": "1", "confirm_destroy": "1"}))
+    assert sent_nothing(svc)
+    r = svc.run("task-create", "1", {"action": "restart", "interval": "daily", "start": "2026-10-13 12:00"}, dry_run=True)
+    assert r["dry_run"]  # now itself is not earlier than now
+
+
+def test_task_create_judges_the_start_by_the_panels_time_zone():
+    berlin = datetime.datetime.now(zoneinfo.ZoneInfo("Europe/Berlin")).replace(tzinfo=None)
+    assert abs((tasks._panel_now() - berlin).total_seconds()) < 5 and tasks._panel_now().tzinfo is None
+
+
+def test_task_create_with_the_real_clock(svc):
+    day = datetime.timedelta(days=1)
+    for start, ok_ in ((tasks._panel_now() - day, False), (tasks._panel_now() + day, True)):
+        args = {"action": "restart", "interval": "daily", "start": f"{start:%Y-%m-%d %H:%M}"}
+        if ok_:
+            assert svc.run("task-create", "1", args, dry_run=True)["dry_run"]
+        else:
+            with pytest.raises(ServiceError):
+                svc.run("task-create", "1", args, dry_run=True)
+
+
+def test_task_create_without_a_time_zone_database_refuses(svc, monkeypatch):
+    def missing(key):
+        raise zoneinfo.ZoneInfoNotFoundError(key)
+    monkeypatch.setattr(tasks, "ZoneInfo", missing)
+    with pytest.raises(ServiceError, match="time zone"):
+        svc.run("task-create", "1", {"action": "restart", "interval": "daily", "start": "2099-01-01 03:30"}, dry_run=True)
+    assert sent_nothing(svc)
+
+
+def test_task_create_refuses_an_identical_task(svc, clock):
+    assert svc.run("tasks", "1")[0]["next"] == "14.10.2026 13:50"
+    for dry in (True, False):
+        with pytest.raises(ServiceError, match="already has this task"):
+            svc.run("task-create", "1", TASK, dry_run=dry, **({} if dry else {"confirm": "1", "confirm_destroy": "1"}))
+    assert sent_nothing(svc)
+    for other in ({"start": "2026-10-14 13:51"}, {"interval": "daily"}, {"action": "restart"}):  # differs in one point
+        assert svc.run("task-create", "1", {**TASK, **other}, dry_run=True)["dry_run"]
+
+
+def test_task_create_dry_run_says_the_task_repeats_until_it_is_deleted(svc, clock):
+    for interval in ("weekly", "2-weeks", "yearly"):
+        would = svc.run("task-create", "1", {"action": "restart", "interval": interval, "start": "2026-11-01 03:00"},
+                        dry_run=True)["would"]
+        assert f"repeats {interval}" in would and "until it is deleted" in would and "task-delete" in would
+    assert sent_nothing(svc)
