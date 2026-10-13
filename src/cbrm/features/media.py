@@ -192,3 +192,19 @@ def _rescue_disable(ctx, vm):
     comp = ctx.product_page(vm).component("rescue").require("disableRescue")
     return ctx.send("Livewire rescue: disableRescue()",
                     lambda: {"messages": comp._send({}, [("disableRescue", [])]).messages()})
+
+
+@feature("drive-delete", "change", "Remove a CD drive from the VM (a VM should have one CD drive, the disk and network)",
+         (Param("drive", "the drive, e.g. ide0"),),
+         verify=lambda ctx, vm, result, drive: (ctx.fresh(vm), drive not in [d["drive"] for d in _drives(ctx, vm)])[1],
+         check=lambda ctx, vm: ctx.product_page(vm).component("drive").require("setCurrentDrive", "deleteDrive"))
+def _drive_delete(ctx, vm, drive):
+    drives = _drives(ctx, vm)
+    if drive not in [d["drive"] for d in drives]:
+        raise ServiceError(f"VM {vm} has no drive {drive!r}")
+    if len(drives) == 1:
+        raise ServiceError(f"{drive} is the VM's only CD drive; keep one")
+    comp = ctx.product_page(vm).component("drive").require("setCurrentDrive", "deleteDrive")
+    return ctx.send(f"Livewire drive: setCurrentDrive({drive!r}), deleteDrive()",
+                    lambda: {"drive": drive, "messages": comp._send(
+                        {}, [("setCurrentDrive", [drive]), ("deleteDrive", [])]).messages()})

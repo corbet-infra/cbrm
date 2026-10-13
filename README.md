@@ -28,7 +28,7 @@ three offer the same features with the same rules. `cbrm features` lists them.
 |---|---|---|---|
 | `boot-order` | read | – | Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network) |
 | `console` | read | `--out` | A screenshot of the VNC console (PNG) |
-| `drives` | read | – | The VM's CD drives and what is inserted |
+| `drives` | read | – | The VM's CD drives and what is inserted (live state from the hypervisor) |
 | `isos` | read | `--search`? | ISO images the panel can insert (public ones and the account's own), optionally filtered |
 | `logs` | read | `--n`? | The panel's action log, newest first, in panel time (Europe/Berlin) |
 | `rescue` | read | – | Rescue system state and the available rescue images |
@@ -37,7 +37,8 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `templates` | read | – | Operating systems the panel can install: name -> template id |
 | `root-password` | secret | – | The root password as the panel shows it |
 | `boot-order-set` | change | `--order …` | Set the boot order: every device key from `boot-order`, first boots first |
-| `console-input` | change | `--text`? `--keys …`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...) |
+| `console-input` | change | `--text`? `--keys …`? `--repeat`? `--interval`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); repeat the keys to catch a boot menu |
+| `drive-delete` | change | `--drive` | Remove a CD drive from the VM (a VM should have one CD drive, the disk and network) |
 | `iso-add` | change | `--url` `--title` | Add your own ISO to the account from a public download URL (kept at least 6 months) |
 | `iso-mount` | change | `--drive` `--iso` | Insert an ISO (id, title or file name from `isos`) into a CD drive |
 | `iso-unmount` | change | `--drive` | Remove the ISO from a CD drive |

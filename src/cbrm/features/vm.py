@@ -94,18 +94,27 @@ def _set_root_password(ctx, vm, password=None):
     return r if r.get("dry_run") else {**r, "root_password": password}
 
 
-@feature("console-input", "change", "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...)",
+@feature("console-input", "change", "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); "
+         "repeat the keys to catch a boot menu",
          (Param("text", "text to type", required=False, default=""),
-          Param("keys", "keys to press after the text", required=False, multiple=True, default=())),
+          Param("keys", "keys to press after the text", required=False, multiple=True, default=()),
+          Param("repeat", "press the keys this many times (max 120)", int, False, default=1),
+          Param("interval", "seconds between repeats", float, False, default=1.0)),
          check=_check_console)
-def _console_input(ctx, vm, text="", keys=()):
+def _console_input(ctx, vm, text="", keys=(), repeat=1, interval=1.0):
+    repeat, interval = int(repeat), float(interval)
+    if not 1 <= repeat <= 120 or not 0.1 <= interval <= 30:
+        raise ServiceError("repeat must be 1..120 and interval 0.1..30 seconds")
+
     def go():
         from ..console import Console
         with Console(*ctx.panel.console_session(vm)) as c:
-            c.type(text)
-            c.keys(*keys)
+            if text:
+                c.type(text)
+            if keys:
+                c.keys(*keys, repeat=repeat, interval=interval)
         return {"sent": True}
-    return ctx.send(f"console of {vm}: type {len(text)} characters, then keys {list(keys)}", go)
+    return ctx.send(f"console of {vm}: type {len(text)} characters, then keys {list(keys)} x{repeat}", go)
 
 
 # -- destroying --------------------------------------------------------------------------------------
