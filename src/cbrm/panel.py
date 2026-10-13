@@ -16,8 +16,7 @@ BASE = "https://bero-host.de"
 POWER_ACTIONS = ("start", "stop", "shutdown", "restart")
 
 
-class PanelError(RuntimeError):
-    pass
+from .errors import ContractError, PanelError
 
 
 @dataclass
@@ -142,7 +141,10 @@ class Panel:
 
     def console_session(self, vm: str) -> tuple[str, int, str]:
         """(host, port, password) of a fresh noVNC session. The password is a Proxmox VNC ticket."""
-        src = HTMLParser(self.page(f"/customer/rootserver/{vm}/vnc")).css_first("iframe").attributes["src"]
+        iframe = HTMLParser(self.page(f"/customer/rootserver/{vm}/vnc")).css_first("iframe")
+        if iframe is None or not iframe.attributes.get("src"):
+            raise ContractError(f"console page of {vm}: no noVNC frame")
+        src = iframe.attributes["src"]
         q = httpx.URL(src).params
         if not (q.get("host") and q.get("port") and q.get("password")):
             raise PanelError(f"no console session offered for {vm}")
@@ -183,6 +185,13 @@ class Panel:
     def reinstall(self, vm: str, template_id: str, ssh_key_ids: list[str]) -> dict:
         """Reinstalls the VM from a template: ERASES ITS DISK. The panel generates a new root password."""
         return self._post_json(vm, "reinstall", {"template": template_id, "ssh_keys[]": list(ssh_key_ids)})
+
+    def get_json(self, path: str, params: dict | None = None) -> dict:
+        """A panel endpoint the page's JavaScript calls with $.getJSON."""
+        r = self.http.get(path, params=params,
+                          headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
+        r.raise_for_status()
+        return r.json()
 
     def power(self, vm: str, action: str) -> dict:
         if action not in POWER_ACTIONS:

@@ -1,0 +1,24 @@
+<html><head><meta name="csrf-token" content="TOKEN"><script src="/vendor/livewire/livewire.min.js" data-update-uri="https://bero-host.de/livewire-x/update"></script></head>
+<body><div>KVM Rootserver #2</div>
+<form id="reinstallServerForm"><select id="rootserverTemplate" name="template"><option value="53">Arch Linux</option></select></form>
+<script>
+$.getJSON('https://bero-host.de/customer/rootserver/1/start'); $.getJSON('https://bero-host.de/customer/rootserver/1/stop');
+$.getJSON('https://bero-host.de/customer/rootserver/1/shutdown'); $.getJSON('https://bero-host.de/customer/rootserver/1/restart');
+$.getJSON('https://bero-host.de/customer/rootserver/1/boot_order?boot_order=' + x);
+$.post('https://bero-host.de/customer/rootserver/1/reinstall', form);
+</script>
+<div wire:snapshot="{&quot;data&quot;:{},&quot;memo&quot;:{&quot;name&quot;:&quot;customerarea.products.rootserver.drive&quot;}}">
+ <div wire:key="existingDriveFromRootserveride0"><h3><span>Laufwerk ide0</span></h3><p> Leer </p>
+  <button wire:click="setCurrentDrive('ide0')">ISO einlegen</button><button wire:click="setCurrentDrive('ide0')">Löschen</button></div>
+ <div wire:key="existingDriveFromRootserveride2"><h3><span>Laufwerk ide2</span></h3><p> nixos-installer.iso </p>
+  <button wire:click="setCurrentDrive('ide2')">ISO einlegen</button><button wire:click="setCurrentDrive('ide2')">Löschen</button></div>
+ <button wire:click.prevent="unmountIso()">Löschen</button>
+ <div><div><div><b>Titel : </b>Nixos 22.11 </div><p><b>Datei : </b>nixos-minimal-22.11-x86_64-linux.iso </p><p><b>Größe : </b>829.00MB </p>
+  <p><button wire:click.prevent="mountIso(7600)">Einlegen</button></p></div></div>
+</div>
+<div wire:snapshot="{&quot;data&quot;:{},&quot;memo&quot;:{&quot;name&quot;:&quot;customerarea.products.rootserver.boot&quot;}}">
+ <div data-bootkey="scsi0" class="bootorderitem">Festplatte scsi0 300 GB</div>
+ <div data-bootkey="ide0" class="bootorderitem">Laufwerk ide0 Leer</div>
+ <div data-bootkey="net0" class="bootorderitem">Netzwerk net0 00:00:00:00:00:00</div>
+</div>
+</body></html>

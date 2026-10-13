@@ -16,11 +16,13 @@ Without Nix: `python -m venv .venv && .venv/bin/pip install -e . pytest`.
 
 ## Ground rules
 
-- **Every interface goes through `cbrm.service.Service`.** New operations go there first, with their
-  rule (allow-list, `confirm` for anything that changes a server, an audit line), then into the API,
-  the client, the CLI and the MCP server.
-- **Nothing destructive or costly**: no reinstall, restore, password or network reset, billing. If you
-  need one of those, open an issue first.
+- **A new operation is one `@feature` in `cbrm/features/`** with its risk class (`read`, `secret`,
+  `change`, `destroy`, `cost`), parameters, `run`, and where possible `verify` (re-read the effect) and
+  `check` (read-only contract proof for `cbrm doctor`). CLI, API and MCP pick it up automatically; the
+  service applies the confirmations. Run `python -m cbrm.cli features` and regenerate the README table.
+- **Check before you send**: use `Component.require(...)` / `Page.require_endpoint(...)` for everything
+  the request relies on, and hand the one changing request to `ctx.send(description, fn)`.
+- **Never guess**: if the panel looks different from what you expect, raise `ContractError`.
 - **Tests without network.** The panel is mocked (see `tests/test_service.py`). If you change a parser,
   add a fixture with the relevant (anonymised) HTML.
 - Be kind to the provider: no polling loops, no parallel request storms. cbrm makes the requests a

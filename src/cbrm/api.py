@@ -1,5 +1,5 @@
-"""HTTP API (FastAPI; OpenAPI at /openapi.json, docs at /docs). It holds the panel credential, so CLIs
-and MCP servers elsewhere only need the API URL and its token. Every route needs the bearer token."""
+"""HTTP API, generated from the feature registry (OpenAPI at /openapi.json, docs at /docs).
+It holds the panel credential, so CLIs and MCP servers elsewhere only need its URL and token."""
 from __future__ import annotations
 
 import os
@@ -11,8 +11,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from . import __version__
-from .panel import PanelError
-from .service import Service, ServiceError
+from .errors import ContractError, PanelError, ServiceError
+from .features import REGISTRY
+from .service import Service
 
 _bearer = HTTPBearer()
 
@@ -23,87 +24,58 @@ def _auth(cred: HTTPAuthorizationCredentials = Depends(_bearer)) -> None:
         raise HTTPException(401, "bad token")
 
 
-class PowerRequest(BaseModel):
-    action: str
-    confirm: str
-
-
-class Confirm(BaseModel):
-    confirm: str
-
-
-class RootPassword(BaseModel):
-    confirm: str
-    password: str | None = None
-
-
-class Reinstall(BaseModel):
-    template: str
-    ssh_keys: list[str] = []
-    confirm: str
-    confirm_destroy: str
-
-
-class ConsoleInput(BaseModel):
-    text: str = ""
-    keys: list[str] = []
-    confirm: str
+class RunRequest(BaseModel):
+    args: dict = {}
+    confirm: str | None = None
+    confirm_destroy: str | None = None
+    confirm_cost: str | None = None
+    dry_run: bool = False
 
 
 def create_app(service: Service) -> FastAPI:
     app = FastAPI(title="cbrm", version=__version__, dependencies=[Depends(_auth)],
-                  description="BERO HOST management: panel and VNC console.")
+                  description="BERO HOST management. GET /features lists every operation with its risk class.")
 
     @app.exception_handler(ServiceError)
     async def refused(_: Request, e: ServiceError):
-        return JSONResponse({"detail": str(e)}, status_code=403)
+        return JSONResponse({"detail": str(e), "kind": "refused"}, status_code=403)
+
+    @app.exception_handler(ContractError)
+    async def contract(_: Request, e: ContractError):
+        return JSONResponse({"detail": str(e), "kind": "panel-changed"}, status_code=409)
 
     @app.exception_handler(PanelError)
     async def panel(_: Request, e: PanelError):
-        return JSONResponse({"detail": str(e)}, status_code=502)
+        return JSONResponse({"detail": str(e), "kind": "panel-error"}, status_code=502)
+
+    def respond(result):
+        return Response(result, media_type="image/png") if isinstance(result, bytes) else result
+
+    @app.get("/features")
+    def features() -> list[dict]:
+        return service.features()
 
     @app.get("/vms")
     def vms() -> list[dict]:
         return service.vms()
 
-    @app.get("/vms/{vm}")
-    def status(vm: str) -> dict:
-        return service.status(vm)
+    @app.get("/vms/{vm}/doctor")
+    def doctor(vm: str) -> dict:
+        return service.check(vm)
 
-    @app.get("/vms/{vm}/logs")
-    def logs(vm: str, n: int = 20) -> list[dict]:
-        return service.logs(vm, n)
+    @app.get("/vms/{vm}/{feature}")
+    def read(vm: str, feature: str, request: Request):
+        """Read-only features with their arguments as query parameters."""
+        f = REGISTRY.get(feature)
+        if f is None or f.risk != "read":
+            raise ServiceError(f"GET serves read features only; use POST for {feature!r}")
+        q = request.query_params
+        args = {p.name: (q.getlist(p.name) if p.multiple else q[p.name]) for p in f.params if p.name in q}
+        return respond(service.run(feature, vm, args))
 
-    @app.get("/vms/{vm}/console.png", response_class=Response)
-    def console(vm: str) -> Response:
-        return Response(service.console_png(vm), media_type="image/png")
-
-    @app.post("/vms/{vm}/power")
-    def power(vm: str, body: PowerRequest) -> dict:
-        return service.power(vm, body.action, body.confirm)
-
-    @app.post("/vms/{vm}/console/input")
-    def console_input(vm: str, body: ConsoleInput) -> dict:
-        return service.console_input(vm, body.text, body.keys, body.confirm)
-
-    @app.get("/vms/{vm}/templates")
-    def templates(vm: str) -> dict:
-        return service.templates(vm)
-
-    @app.get("/vms/{vm}/ssh-keys")
-    def ssh_keys(vm: str) -> dict:
-        return service.ssh_keys(vm)
-
-    @app.post("/vms/{vm}/root-password/reveal")
-    def root_password(vm: str, body: Confirm) -> dict:
-        return service.root_password(vm, body.confirm)
-
-    @app.post("/vms/{vm}/root-password")
-    def set_root_password(vm: str, body: RootPassword) -> dict:
-        return service.set_root_password(vm, body.confirm, body.password)
-
-    @app.post("/vms/{vm}/reinstall")
-    def reinstall(vm: str, body: Reinstall) -> dict:
-        return service.reinstall(vm, body.template, body.ssh_keys, body.confirm, body.confirm_destroy)
+    @app.post("/vms/{vm}/{feature}")
+    def run(vm: str, feature: str, body: RunRequest):
+        return respond(service.run(feature, vm, body.args, confirm=body.confirm, confirm_destroy=body.confirm_destroy,
+                                   confirm_cost=body.confirm_cost, dry_run=body.dry_run))
 
     return app

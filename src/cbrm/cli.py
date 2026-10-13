@@ -1,4 +1,5 @@
-"""cbrm command line: the same operations as the API and the MCP server (see cbrm.config for setup)."""
+"""cbrm command line, generated from the feature registry: `cbrm <feature> <vm> [--arg …]`.
+Setup: see cbrm.config. `cbrm features` lists everything with its risk class."""
 from __future__ import annotations
 
 import argparse
@@ -6,41 +7,52 @@ import json
 import os
 import sys
 
-from .panel import POWER_ACTIONS, PanelError
-from .service import ServiceError
+from .errors import ContractError, PanelError, ServiceError
+from .features import REGISTRY
 
 
-def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(prog="cbrm", description="BERO HOST management: panel and VNC console.")
+def _parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="cbrm", description="BERO HOST management: the panel and the VNC console.")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("vms", help="all VMs of the account")
-    sub.add_parser("status").add_argument("vm")
-    s = sub.add_parser("logs"); s.add_argument("vm"); s.add_argument("-n", type=int, default=20)
-    s = sub.add_parser("console", help="screenshot of the VNC console"); s.add_argument("vm"); s.add_argument("out")
-    s = sub.add_parser("power", help="changes the VM"); s.add_argument("vm"); s.add_argument("action", choices=POWER_ACTIONS)
-    s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
-    s = sub.add_parser("input", help="type text and/or press keys on the console (changes the VM)")
-    s.add_argument("vm"); s.add_argument("--text", default=""); s.add_argument("--key", action="append", default=[],
-                                                                              help="vncdotool key name, repeatable")
-    s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
-    sub.add_parser("templates", help="installable operating systems").add_argument("vm")
-    sub.add_parser("ssh-keys", help="SSH keys stored in the panel").add_argument("vm")
-    s = sub.add_parser("root-password", help="show the root password (audited)")
-    s.add_argument("vm"); s.add_argument("--confirm", required=True, metavar="VM")
-    s = sub.add_parser("set-root-password", help="set (or generate) the root password (changes the VM)")
-    s.add_argument("vm"); s.add_argument("--password", help="default: generate 24 characters")
-    s.add_argument("--confirm", required=True, metavar="VM")
-    s = sub.add_parser("reinstall", help="reinstall from a template: ERASES THE DISK")
-    s.add_argument("vm"); s.add_argument("--template", required=True, help="name as `cbrm templates` lists it")
-    s.add_argument("--ssh-key", action="append", default=[], help="name as `cbrm ssh-keys` lists it, repeatable")
-    s.add_argument("--confirm", required=True, metavar="VM"); s.add_argument("--confirm-destroy", required=True, metavar="VM")
+    sub.add_parser("features", help="every operation with its risk class and arguments")
+    sub.add_parser("doctor", help="check read-only that the panel still offers every feature").add_argument("vm")
     s = sub.add_parser("serve", help="run the HTTP API (needs CBRM_API_TOKEN)")
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
-    a = p.parse_args(argv)
+    for f in REGISTRY.values():
+        s = sub.add_parser(f.name, help=f"[{f.risk}] {f.help}")
+        s.add_argument("vm")
+        for prm in f.params:
+            opt = "--" + prm.name.replace("_", "-")
+            kw = {"help": prm.help, "dest": prm.name, "type": prm.type}
+            if prm.multiple:
+                kw.update(nargs="+", default=None)
+            if prm.choices:
+                kw["choices"] = prm.choices
+            s.add_argument(opt, required=prm.required, **kw)
+        if f.returns == "png":
+            s.add_argument("--out", required=True, help="PNG file to write")
+        if f.risk != "read":
+            s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
+            s.add_argument("--dry-run", action="store_true", help="check everything, send nothing, show what would be sent")
+        if f.risk == "destroy":
+            s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased")
+        if f.risk == "cost":
+            s.add_argument("--confirm-cost", required=True, metavar="AMOUNT", help="the exact amount the panel quotes")
+    return p
 
-    def out(obj, text: str) -> None:
-        print(json.dumps(obj, ensure_ascii=False) if a.json else text)
+
+def main(argv: list[str] | None = None) -> None:
+    a = _parser().parse_args(argv)
+
+    def out(obj) -> None:
+        if a.json or not isinstance(obj, (dict, list)):
+            print(json.dumps(obj, ensure_ascii=False, indent=None if a.json else 2, default=str))
+        elif isinstance(obj, dict):
+            print("\n".join(f"{k}: {json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v}" for k, v in obj.items()))
+        else:
+            print("\n".join(json.dumps(x, ensure_ascii=False) if isinstance(x, (dict, list)) else str(x) for x in obj))
 
     if a.cmd == "serve":
         import uvicorn
@@ -57,30 +69,36 @@ def main(argv: list[str] | None = None) -> None:
     b = backend()
     try:
         if a.cmd == "vms":
-            rows = b.vms()
-            out(rows, "\n".join(f"{r['vm']} {r['state']} {r.get('ipv4', '')} {r.get('system', '')}" for r in rows))
-        elif a.cmd == "status":
-            s = b.status(a.vm); out(s, "\n".join(f"{k}: {v}" for k, v in s.items()))
-        elif a.cmd == "logs":
-            e = b.logs(a.vm, a.n); out(e, "\n".join(f"{x['date']} {x['action']}" for x in e))
-        elif a.cmd == "console":
-            with open(a.out, "wb") as f:
-                f.write(b.console_png(a.vm))
-            out({"file": a.out}, a.out)
-        elif a.cmd == "power":
-            r = b.power(a.vm, a.action, a.confirm); out(r, r.get("message", json.dumps(r)))
-        elif a.cmd in ("templates", "ssh-keys"):
-            r = b.templates(a.vm) if a.cmd == "templates" else b.ssh_keys(a.vm)
-            out(r, "\n".join(r))
-        elif a.cmd == "root-password":
-            r = b.root_password(a.vm, a.confirm); out(r, r["root_password"])
-        elif a.cmd == "set-root-password":
-            r = b.set_root_password(a.vm, a.confirm, a.password); out(r, r["root_password"])
-        elif a.cmd == "reinstall":
-            r = b.reinstall(a.vm, a.template, a.ssh_key, a.confirm, a.confirm_destroy)
-            out(r, r.get("message", json.dumps(r)))
-        elif a.cmd == "input":
-            out(b.console_input(a.vm, a.text, a.key, a.confirm), "sent")
+            out(b.vms())
+        elif a.cmd == "features":
+            fs = b.features()
+            if a.json:
+                out(fs)
+            else:
+                for f in fs:
+                    args = " ".join(("--" + p["name"].replace("_", "-")) + ("" if p["required"] else "?") for p in f["params"])
+                    print(f"{f['risk']:8} {f['name']:18} {args:30} {f['help']}")
+        elif a.cmd == "doctor":
+            res = b.check(a.vm)
+            out(res)
+            if any(v.startswith("BROKEN") for v in res.values()):
+                sys.exit(3)
+        else:
+            f = REGISTRY[a.cmd]
+            args = {p.name: getattr(a, p.name) for p in f.params if getattr(a, p.name) is not None}
+            r = b.run(f.name, a.vm, args, confirm=getattr(a, "confirm", None),
+                      confirm_destroy=getattr(a, "confirm_destroy", None), confirm_cost=getattr(a, "confirm_cost", None),
+                      dry_run=getattr(a, "dry_run", False))
+            if isinstance(r, bytes):
+                with open(a.out, "wb") as fh:
+                    fh.write(r)
+                print(a.out)
+            else:
+                out(r)
+                if isinstance(r, dict) and r.get("verified") is False:
+                    sys.exit(4)
+    except ContractError as e:
+        sys.exit(f"cbrm: the panel changed, nothing was sent: {e}")
     except (ServiceError, PanelError) as e:
         sys.exit(f"cbrm: {e}")
 

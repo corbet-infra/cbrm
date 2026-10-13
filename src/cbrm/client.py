@@ -1,47 +1,38 @@
-"""The Service interface over the HTTP API, so the CLI and the MCP server work the same whether they
+"""The Service interface over the HTTP API, so the CLI and the MCP server behave the same whether they
 run next to the credential (in-process Service) or against a remote `cbrm serve` (CBRM_API_URL)."""
 from __future__ import annotations
 
+import os
+
 import httpx
 
-from .service import ServiceError
+from .errors import ContractError, PanelError, ServiceError
 
 
 class Client:
     def __init__(self, url: str, token: str):
-        self.http = httpx.Client(base_url=url.rstrip("/"), headers={"Authorization": f"Bearer {token}"},
-                                 timeout=120)
+        self.http = httpx.Client(base_url=url.rstrip("/"), headers={"Authorization": f"Bearer {token}"}, timeout=300)
 
     def _do(self, method: str, path: str, **kw):
         r = self.http.request(method, path, **kw)
-        if r.status_code == 403:
-            raise ServiceError(r.json().get("detail", "refused"))
+        if r.status_code in (403, 409, 502):
+            detail = r.json().get("detail", r.text)
+            raise {403: ServiceError, 409: ContractError, 502: PanelError}[r.status_code](detail)
         r.raise_for_status()
         return r
 
+    def features(self): return self._do("GET", "/features").json()
     def vms(self): return self._do("GET", "/vms").json()
-    def status(self, vm): return self._do("GET", f"/vms/{vm}").json()
-    def logs(self, vm, n=20): return self._do("GET", f"/vms/{vm}/logs", params={"n": n}).json()
-    def console_png(self, vm): return self._do("GET", f"/vms/{vm}/console.png").content
-    def power(self, vm, action, confirm):
-        return self._do("POST", f"/vms/{vm}/power", json={"action": action, "confirm": confirm}).json()
-    def templates(self, vm): return self._do("GET", f"/vms/{vm}/templates").json()
-    def ssh_keys(self, vm): return self._do("GET", f"/vms/{vm}/ssh-keys").json()
-    def root_password(self, vm, confirm):
-        return self._do("POST", f"/vms/{vm}/root-password/reveal", json={"confirm": confirm}).json()
-    def set_root_password(self, vm, confirm, password=None):
-        return self._do("POST", f"/vms/{vm}/root-password", json={"confirm": confirm, "password": password}).json()
-    def reinstall(self, vm, template, ssh_keys, confirm, confirm_destroy):
-        return self._do("POST", f"/vms/{vm}/reinstall", json={"template": template, "ssh_keys": ssh_keys,
-                                                               "confirm": confirm, "confirm_destroy": confirm_destroy}).json()
-    def console_input(self, vm, text="", keys=None, confirm=""):
-        return self._do("POST", f"/vms/{vm}/console/input",
-                        json={"text": text, "keys": keys or [], "confirm": confirm}).json()
+    def check(self, vm): return self._do("GET", f"/vms/{vm}/doctor").json()
+
+    def run(self, name, vm, args=None, *, confirm=None, confirm_destroy=None, confirm_cost=None, dry_run=False):
+        r = self._do("POST", f"/vms/{vm}/{name}", json={"args": args or {}, "confirm": confirm, "confirm_destroy":
+                     confirm_destroy, "confirm_cost": confirm_cost, "dry_run": dry_run})
+        return r.content if r.headers.get("content-type", "").startswith("image/") else r.json()
 
 
 def backend():
     """CBRM_API_URL (+ CBRM_API_TOKEN) -> remote API client; otherwise the in-process Service."""
-    import os
     if os.environ.get("CBRM_API_URL"):
         return Client(os.environ["CBRM_API_URL"], os.environ.get("CBRM_API_TOKEN", ""))
     from .config import credentials
