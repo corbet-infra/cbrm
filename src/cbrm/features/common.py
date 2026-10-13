@@ -124,11 +124,17 @@ def _json(r, what: str) -> dict:
 
 def post_form(ctx, page: Page, path: str, data: dict) -> dict:
     """POST a form the way the page's own script does ($.post with the page's CSRF token)."""
-    return _json(ctx.panel.http.post(path, data={"_token": page.csrf, **data}, headers=XHR), path)
+    try:
+        return _json(ctx.panel.http.post(path, data={"_token": page.csrf, **data}, headers=XHR), path)
+    except httpx.HTTPError as e:  # transport errors too (connection reset, timeout)
+        raise PanelError(f"POST {path}: {type(e).__name__}: {e}") from e
 
 
 def get_json(ctx, path: str, params: dict | None = None) -> dict:
-    return _json(ctx.panel.http.get(path, params=params, headers=XHR), path)
+    try:
+        return _json(ctx.panel.http.get(path, params=params, headers=XHR), path)
+    except httpx.HTTPError as e:
+        raise PanelError(f"GET {path}: {type(e).__name__}: {e}") from e
 
 
 def ok(result) -> bool:
