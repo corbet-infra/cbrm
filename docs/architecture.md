@@ -25,11 +25,12 @@ which a dry run turns into a description.
 | `Page.require_endpoint` | the page's script no longer calls an endpoint → `ContractError` |
 | `common.require_post` | the page's own `$.post` to an endpoint no longer sends exactly the fields cbrm sends → `ContractError` |
 | parsers | an expected element is missing → `ContractError` instead of an empty answer |
-| `verify` | after a change, the panel does not show the effect → `verified: false` (CLI exit 4) |
+| `verify` | after a change, the panel does not show the effect → `verified: false` (CLI exit 4); cannot tell, or nothing to re-read → `verified: null` |
 | `cbrm doctor` | runs every feature's check read-only → `ok` / `BROKEN: reason` |
 
 Account-wide features (`account-*`) read `/customer/account` instead of a product page. The VM argument
-still names the account context, so the allow-list and the confirmations of `Service` apply to them unchanged.
+only names the account context: the allow-list and the confirmations of `Service` decide which VM may name it, but
+they do not scope the effect. These features are **not limited by the VM allow-list**; they act on the whole account.
 
 Interfaces report a contract error distinctly: CLI "the panel changed, nothing was sent", HTTP 409,
 an MCP tool error with the same text.

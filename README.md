@@ -45,8 +45,8 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `tasks` | read | – | The VM's scheduled tasks: id, action, repeat interval and next run (panel time) |
 | `templates` | read | – | Operating systems the panel can install: name -> template id |
 | `root-password` | secret | – | The root password as the panel shows it |
-| `account-ssh-key-delete` | change | `--key` | Delete an SSH key from the panel account (account-wide; servers already installed keep it) |
-| `account-ssh-key-import` | change | `--name` `--public-key` | Store a public SSH key in the panel account (account-wide; it can then be baked into a reinstall) |
+| `account-ssh-key-delete` | change | `--key` | Delete an SSH key from the panel account (account-wide, not limited by the VM allow-list; servers already installed keep it) |
+| `account-ssh-key-import` | change | `--name` `--public-key` | Store a public SSH key in the panel account (account-wide, not limited by the VM allow-list; it can then be baked into a reinstall) |
 | `backup-create` | change | `--title` | Create a backup now (the panel makes it in the background; needs a free slot, see `backups`) |
 | `boot-order-set` | change | `--order …` | Set the boot order: every device key from `boot-order`, first boots first |
 | `console-input` | change | `--text`? `--keys …`? `--repeat`? `--interval`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); repeat the keys to catch a boot menu |
@@ -61,12 +61,12 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `rescue-disable` | change | – | Leave the rescue system |
 | `rescue-enable` | change | `--image` | Boot the next time into a rescue image (id or title from `rescue`) |
 | `set-root-password` | change | `--password`? | Set the root password (generated if omitted); returns it |
-| `task-create` | change | `--action` `--interval` `--start` | Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, 3-days, 5-days, weekly, 2-weeks, monthly, yearly). A stop/restart task keeps interrupting the VM |
 | `task-delete` | change | `--task` | Delete a scheduled task (deleting the weekly backup task switches the automatic backup off) |
 | `backup-delete` | destroy | `--backup` | Delete a backup. THE BACKUP IS GONE |
 | `backup-restore` | destroy | `--backup` `--live`? | Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state |
 | `network-reset` | destroy | – | Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): everything you configured there is lost |
 | `reinstall` | destroy | `--template` `--ssh-keys …`? | Reinstall from a template with stored SSH keys baked in. ERASES THE DISK |
+| `task-create` | destroy | `--action` `--interval` `--start` | Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, 3-days, 5-days, weekly, 2-weeks, monthly, yearly). DESTROYING: the task acts later and repeatedly without you until it is deleted (a stop or restart task keeps interrupting the VM, a backup task may rotate or overwrite backups), so it needs both confirmations |
 <!-- features:end -->
 
 | Risk | What cbrm requires |
@@ -74,16 +74,24 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | read | nothing |
 | secret | `--confirm <vm>`; audited without the value |
 | change | `--confirm <vm>`; audited; checked afterwards where the panel shows the effect (`verified`) |
-| destroy | `--confirm <vm>` and `--confirm-destroy <vm>` |
+| destroy | `--confirm <vm>` and `--confirm-destroy <vm>`: erases or overwrites data, or acts later and repeatedly without you (`reinstall`, `backup-delete`, `backup-restore`, `network-reset`, `task-create`) |
 | cost | `--confirm <vm>` and `--confirm-cost <amount>` (none implemented yet) |
+
+`verified` is `true` when cbrm re-read the panel and it shows the effect, `false` when it does not (look again
+before repeating the change), and `null` when cbrm cannot tell: the panel shows no sign of the change to re-read
+(`backup-restore`, `network-reset`, `console-input`, …) or could not be read afterwards (then `verify_error`
+may say why). `null` never means "failed".
 
 Every changing command takes `--dry-run`: cbrm reads the panel (it may refresh or page through lists, which
 changes nothing), checks everything, and shows the exact request it would send — without sending it or any
 other request that changes or submits something. A dry run of a `secret` feature reveals nothing.
 
-Features named `account-*` act on the whole account (stored SSH keys, credit), not on one server. They
-still take `<vm>`: it names the account context, must belong to the account, must be on the allow-list
-(`CBRM_VMS`) and is repeated as `--confirm <vm>` like for every other change.
+Features named `account-*` act on the **whole account** (stored SSH keys, credit), not on one server, and are
+**not limited by the VM allow-list** (`CBRM_VMS`): the allow-list only decides which `<vm>` may *name* the
+account context. They still take `<vm>`: it must belong to the account, must be on the allow-list and is
+repeated as `--confirm <vm>` like for every other change. One allowed VM is therefore enough to add or delete
+a stored key of the whole account, including keys that a later reinstall of a server outside the allow-list
+would bake in. If you give a team or an assistant an allow-list, think of `account-*` as account access.
 
 ### When BERO changes the panel
 
@@ -111,7 +119,7 @@ Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pi
 |---|---|
 | `CBRM_USER`, `CBRM_PASSWORD` | the panel login |
 | `CBRM_CREDENTIALS_CMD` | instead: a command that prints the user and the password on two lines (`pass`, `sops`, a vault CLI, …) |
-| `CBRM_VMS` | allow-list, e.g. `"10001 10002"`: every other server is refused. Unset means every server of the account |
+| `CBRM_VMS` | allow-list, e.g. `"10001 10002"`: every other server is refused. Unset means every server of the account. It does **not** limit the `account-*` features (stored SSH keys, credit): they act on the whole account |
 | `CBRM_API_URL`, `CBRM_API_TOKEN` | use a running `cbrm serve` instead of logging in yourself |
 | `XDG_STATE_HOME` | where the session cookie and `audit.log` live (`$XDG_STATE_HOME/cbrm`, mode 0700) |
 
@@ -145,7 +153,8 @@ The skill [`skills/bero/SKILL.md`](https://git.corbet.ch/corbet-infra/cbrm/src/b
 | Hung server | `cbrm console <vm> --out s.png` → `cbrm power <vm> --action restart --confirm <vm>` → `cbrm console …` |
 | What happened to my server? | `cbrm logs <vm>`: reinstalls, restarts and starts as the panel recorded them |
 | Is cbrm still in sync with the panel? | `cbrm doctor <vm>` |
-| Back up before a risky change | `cbrm backups <vm>` (free slot?) → `cbrm backup-create <vm> --title <t> --confirm <vm>` → later `cbrm backups <vm>` shows it when the panel has finished |
+| Back up before a risky change | `cbrm backups <vm>` (free slot?) → `cbrm backup-create <vm> --title <t> --confirm <vm>` (`verified: true` once the new backup or the used slot shows; `false` means not visible yet: look at `cbrm backups <vm>` again before repeating) |
+| Repeat something on a schedule | `cbrm tasks <vm>` → `cbrm task-create <vm> --action dump --interval weekly --start "2026-10-20 03:30" --confirm <vm> --confirm-destroy <vm>` (start in panel time, not in the past; the task repeats until `cbrm task-delete`) |
 | Reverse DNS for a mail server | `cbrm addresses <vm>` → `cbrm rdns-set <vm> --address <ip> --name mail.example.org --confirm <vm>` (`verified: true` once the panel shows it) |
 | Server unreachable after a firewall or network change | `cbrm console <vm> --out s.png`, then `cbrm network-reset <vm> --confirm <vm> --confirm-destroy <vm>` — it resets the panel-managed network configuration and the software firewall |
 

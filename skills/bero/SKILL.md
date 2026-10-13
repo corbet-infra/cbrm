@@ -12,7 +12,9 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 
 1. **Read before you act.** `bero_status`, `bero_logs`, `bero_console`, `bero_drives`, `bero_boot_order`; say what you see.
 2. **Changing tools repeat the target**: `confirm=<vm>`; destroying ones also `confirm_destroy=<vm>`. Never act on a
-   VM the user did not name. Use `dry_run=true` first when unsure: it shows the exact request.
+   VM the user did not name. Use `dry_run=true` first when unsure: it shows the exact request. Destroying includes
+   what acts later and repeatedly: `bero_task_create` (a scheduled stop, restart or backup repeats until
+   `bero_task_delete`; the start must not be in the past, panel time).
 3. **"panel changed" means stop.** BERO altered its panel; nothing was sent. Report it (and run `bero_doctor`);
    never try to reach the same effect another way.
 4. **One VM at a time** in a cluster: check the others are healthy before stopping or restarting one.
@@ -21,7 +23,11 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 6. **Reinstall erases the disk**: only when the user asked for this VM to be wiped. Bake an SSH key in.
 7. Root passwords are secrets: reveal or set them only for the task, never repeat them in chat or files.
 8. Console: screenshot, act, screenshot again. `verified=false` on a change means the panel did not show
-   the effect yet: look again before retrying.
+   the effect yet: look again before retrying. `verified=null` means cbrm cannot tell (the panel shows no sign
+   of that change, or could not be read): look yourself, never read it as failure or as success.
+9. **`bero_account_*` tools act on the whole account** (stored SSH keys, credit), not on one server, and are
+   **not limited by the VM allow-list**: the `vm` argument only names the account context. Delete or import
+   keys only when the user asked for exactly that; a stored key can be baked into any server's reinstall.
 
 ## Recipes
 
@@ -33,10 +39,10 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 | Fresh OS with your key | `bero_templates`, `bero_ssh_keys` → `bero_reinstall(template, ssh_keys=[name], confirm=vm, confirm_destroy=vm)` → SSH |
 | Boot your own ISO | `bero_iso_add(url, title, confirm=vm)` (the panel downloads in the background; wait) → `bero_isos(search=title)` → `bero_iso_mount(drive="ide2", iso=id, confirm=vm)` (must be `verified: true`) → keep one CD drive (`bero_drive_delete`) → **then** `bero_boot_order_set(order=["ide2","scsi0","net0"], confirm=vm)` → `bero_power(stop)`, `bero_power(start)` → right away `bero_console_input(keys=["enter"], repeat=3, interval=0.5, confirm=vm)` to pick the ISO menu's default → `bero_console` |
 | Act at the console | `bero_console` → `bero_console_input(text=..., keys=["enter"], confirm=vm)` → `bero_console` |
-| Backup before a risky change | `bero_backups` (free slot?) → `bero_backup_create(title, confirm=vm)` → later `bero_backups` shows it; restoring (`bero_backup_restore`) and deleting (`bero_backup_delete`) overwrite or destroy: only when the user asked, with `confirm` and `confirm_destroy` |
+| Backup before a risky change | `bero_backups` (free slot?) → `bero_backup_create(title, confirm=vm)` (`verified: true` once the backup or the used slot shows; if not, `bero_backups` again) ; restoring (`bero_backup_restore`) and deleting (`bero_backup_delete`) overwrite or destroy: only when the user asked, with `confirm` and `confirm_destroy` |
 | Reverse DNS | `bero_addresses` → `bero_rdns_set(address, name, confirm=vm)` (`verified: true`) |
 | Resource use | `bero_stats` (now) or `bero_stats_history(timeframe, metric)` |
-| Stored SSH keys | `bero_account_ssh_keys`; `bero_account_ssh_key_import(name, public_key, confirm=vm)` takes **public** keys only; account-wide, `vm` names the account context |
+| Stored SSH keys | `bero_account_ssh_keys`; `bero_account_ssh_key_import(name, public_key, confirm=vm)` takes **public** keys only; account-wide and not limited by the allow-list, `vm` only names the account context |
 | Runtime, prices, credit | `bero_renewal`, `bero_account_credit` (read only; paying is not part of cbrm) |
 | Is cbrm still in sync with the panel? | `bero_doctor(vm)` |
 

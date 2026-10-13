@@ -23,6 +23,8 @@ mcp = _Server("cbrm", instructions=(
     "Read first. Every tool states its risk: change tools need confirm=<vm>, destroy tools also "
     "confirm_destroy=<vm>, cost tools confirm_cost=<amount>. dry_run=true shows what would be sent. "
     "A 'panel changed' error means BERO altered the panel and the change was not made; report it, do not work around it. "
+    "bero_account_* tools act on the whole account (stored SSH keys, credit), not on one server: the VM allow-list "
+    "does not limit them. "
     "`system` in bero_status is the last template BERO installed, not necessarily what runs."))
 _b = None
 
