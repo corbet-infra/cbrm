@@ -1,9 +1,13 @@
-"""The MCP server imports and registers its tools with the installed mcp version (1.x or 2.x)."""
+"""The MCP server registers one tool per feature (plus vms and doctor) with mcp 1.x or 2.x."""
 import asyncio
+
+from cbrm.features import REGISTRY
 
 
 def test_tools_registered():
     from cbrm.mcp import mcp
-    names = {t.name for t in asyncio.run(mcp.list_tools())}
-    assert names == {"bero_vms", "bero_status", "bero_logs", "bero_console", "bero_power", "bero_console_input",
-                     "bero_templates", "bero_ssh_keys", "bero_root_password", "bero_set_root_password", "bero_reinstall"}
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    assert set(tools) == {"bero_" + n.replace("-", "_") for n in REGISTRY} | {"bero_vms", "bero_doctor"}
+    tool = tools["bero_reinstall"]
+    schema = getattr(tool, "input_schema", None) or tool.inputSchema  # mcp 2.x / 1.x
+    assert {"vm", "template", "confirm", "confirm_destroy"} <= set(schema["required"])

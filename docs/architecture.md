@@ -1,19 +1,34 @@
 # Architecture
 
 ```
-cbrm.panel     Panel     the customer panel over HTTP: login, pages, Livewire, power endpoints
-cbrm.console   Console   the VNC console: Proxmox noVNC websocket ⇄ local TCP ⇄ vncdotool
+cbrm.panel      Panel      login/session, server-rendered pages, panel JSON endpoints
+cbrm.livewire   Page/Component  Livewire calls with contract checks (require methods/fields/endpoints)
+cbrm.console    Console    the VNC console: Proxmox noVNC websocket ⇄ local TCP ⇄ vncdotool
       ▼
-cbrm.service   Service   the rules, in one place: allow-list, confirm=<vm>, audit log
+cbrm.features   REGISTRY   every operation: name, risk class, parameters, run, verify, check
       ▼
-cbrm.api       HTTP API  FastAPI over Service; bearer token; OpenAPI at /openapi.json
-cbrm.client    Client    the Service interface over the HTTP API
-cbrm.cli       cbrm      Service in-process, or Client when CBRM_API_URL is set
-cbrm.mcp       cbrm-mcp  the same choice, exposed as MCP tools
+cbrm.service    Service    the rules for every feature: allow-list, confirmations per risk class,
+                           dry run, audit log, verification; `check` = doctor
+      ▼
+cbrm.api / cbrm.cli / cbrm.mcp   generated from the registry; CLI and MCP use the API when CBRM_API_URL is set
 ```
 
-Every interface goes through `Service`, so a rule added there holds for the CLI, the API and MCP alike.
-`Client` and `Service` have the same methods; `cbrm.client.backend()` picks one from the environment.
+Adding a feature is one decorated function in `cbrm/features/`; every interface picks it up with the
+right guards. A feature reads and checks first and passes its single changing request to `ctx.send`,
+which a dry run turns into a description.
+
+## Breaking safely
+
+| Layer | What happens when BERO changes the panel |
+|---|---|
+| `Component.require` | a Livewire method or field a feature needs is gone → `ContractError`, nothing sent |
+| `Page.require_endpoint` | the page's script no longer calls an endpoint → `ContractError` |
+| parsers | an expected element is missing → `ContractError` instead of an empty answer |
+| `verify` | after a change, the panel does not show the effect → `verified: false` (CLI exit 4) |
+| `cbrm doctor` | runs every feature's check read-only → `ok` / `BROKEN: reason` |
+
+Interfaces report a contract error distinctly: CLI "the panel changed, nothing was sent", HTTP 409,
+an MCP tool error with the same text.
 
 ## The panel (cbrm.panel)
 

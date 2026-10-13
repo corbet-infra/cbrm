@@ -1,18 +1,14 @@
-"""The operations every interface offers (CLI, HTTP API, MCP), with the rules in one place:
-the allow-list, the repeated target for anything that changes a VM, and the audit log."""
+"""The one place where cbrm's rules are applied, for every feature and every interface:
+the allow-list, the confirmations each risk class needs, dry runs, the audit log and verification."""
 from __future__ import annotations
 
 import datetime
 import os
-import secrets
-import string
 from pathlib import Path
 
-from .panel import POWER_ACTIONS, Panel
-
-
-class ServiceError(ValueError):
-    """The request is refused (unknown VM, missing confirmation, ...)."""
+from .errors import ServiceError
+from .features import REGISTRY, Ctx, Feature
+from .panel import Panel
 
 
 class Service:
@@ -26,80 +22,97 @@ class Service:
         with os.fdopen(fd, "a") as f:
             f.write(f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ} {line}\n")
 
-    def _vm(self, vm: str, confirm: str | None = None, changing: bool = False) -> str:
-        if self.allow and vm not in self.allow:
-            raise ServiceError(f"VM {vm} is not in the allow-list")
-        if changing and confirm != vm:
-            raise ServiceError(f"this changes VM {vm}: repeat it as confirm={vm}")
-        return vm
+    def features(self) -> list[dict]:
+        return [{"name": f.name, "risk": f.risk, "help": f.help, "returns": f.returns,
+                 "params": [{"name": p.name, "help": p.help, "type": p.type.__name__, "required": p.required,
+                             "multiple": p.multiple, "choices": list(p.choices), "secret": p.secret} for p in f.params]}
+                for f in REGISTRY.values()]
 
-    # reading
     def vms(self) -> list[dict]:
         return [self.panel.status(v) for v in sorted(self.panel.products()) if not self.allow or v in self.allow]
 
-    def status(self, vm: str) -> dict:
-        return self.panel.status(self._vm(vm))
+    def _feature(self, name: str) -> Feature:
+        if name not in REGISTRY:
+            raise ServiceError(f"unknown feature {name!r}")
+        return REGISTRY[name]
 
-    def logs(self, vm: str, n: int = 20) -> list[dict]:
-        return [e.__dict__ for e in self.panel.logs(self._vm(vm))[:n]]
+    def _args(self, f: Feature, args: dict) -> dict:
+        known = {p.name: p for p in f.params}
+        unknown = set(args) - set(known)
+        if unknown:
+            raise ServiceError(f"{f.name}: unknown argument(s) {sorted(unknown)}")
+        out = {}
+        for p in f.params:
+            v = args.get(p.name, p.default)
+            if v is None or v == "" or v == ():
+                if p.required:
+                    raise ServiceError(f"{f.name}: {p.name} is required")
+                out[p.name] = p.default
+                continue
+            if p.multiple:
+                v = [v] if isinstance(v, str) else list(v)
+                v = [p.type(x) for x in v]
+            else:
+                v = p.type(v)
+            if p.choices and any(x not in p.choices for x in (v if p.multiple else [v])):
+                raise ServiceError(f"{f.name}: {p.name} must be one of {list(p.choices)}")
+            out[p.name] = v
+        return out
 
-    def console_png(self, vm: str) -> bytes:
-        from .console import Console
-        with Console(*self.panel.console_session(self._vm(vm))) as c:
-            return c.png()
+    def _gate(self, f: Feature, vm: str, confirm, confirm_destroy, confirm_cost) -> None:
+        if self.allow and vm not in self.allow:
+            raise ServiceError(f"VM {vm} is not in the allow-list")
+        if f.risk in ("secret", "change", "destroy", "cost") and confirm != vm:
+            raise ServiceError(f"{f.name} ({f.risk}) acts on VM {vm}: repeat it as confirm={vm}")
+        if f.risk == "destroy" and confirm_destroy != vm:
+            raise ServiceError(f"{f.name} destroys data on VM {vm}: also repeat it as confirm_destroy={vm}")
+        if f.risk == "cost" and not confirm_cost:
+            raise ServiceError(f"{f.name} costs money: confirm_cost must repeat the exact amount the panel quotes")
 
-    # changing
-    def power(self, vm: str, action: str, confirm: str) -> dict:
-        self._vm(vm, confirm, changing=True)
-        if action not in POWER_ACTIONS:
-            raise ServiceError(f"action must be one of {', '.join(POWER_ACTIONS)}")
-        self._audit(f"power {vm} {action} requested")
-        r = self.panel.power(vm, action)
-        self._audit(f"power {vm} {action} -> {r}")
-        return r
+    def run(self, name: str, vm: str, args: dict | None = None, *, confirm: str | None = None,
+            confirm_destroy: str | None = None, confirm_cost: str | None = None, dry_run: bool = False):
+        """Run a feature. Returns its result (bytes for PNG features). Changing features return a dict with
+        `result` and `verified` (True, False, or None when the feature has no verification)."""
+        f = self._feature(name)
+        a = self._args(f, args or {})
+        if not dry_run:
+            self._gate(f, vm, confirm, confirm_destroy, confirm_cost)
+        elif self.allow and vm not in self.allow:
+            raise ServiceError(f"VM {vm} is not in the allow-list")
+        ctx = Ctx(self.panel, dry_run=dry_run)
+        if f.risk == "read":
+            return f.run(ctx, vm, **a)
+        shown = {k: ("***" if next(p for p in f.params if p.name == k).secret else v) for k, v in a.items()}
+        if not dry_run:
+            self._audit(f"{f.name} {vm} {shown} requested")
+        result = f.run(ctx, vm, **a)
+        if dry_run:
+            return result
+        if f.risk == "secret":
+            self._audit(f"{f.name} {vm} revealed")
+            return result
+        logged = {k: v for k, v in result.items() if k != "root_password"} if isinstance(result, dict) else result
+        self._audit(f"{f.name} {vm} -> {logged}")
+        verified = f.verify(ctx, vm, result, **a) if f.verify else None
+        if f.verify:
+            self._audit(f"{f.name} {vm} verified={verified}")
+        return {"result": result, "verified": verified}
 
-    def templates(self, vm: str) -> dict:
-        return self.panel.templates(self._vm(vm))
-
-    def ssh_keys(self, vm: str) -> dict:
-        return self.panel.ssh_keys(self._vm(vm))
-
-    def root_password(self, vm: str, confirm: str) -> dict:
-        """Reveals a secret: needs the target repeated, and is audited (without the value)."""
-        self._vm(vm, confirm, changing=True)
-        self._audit(f"root-password {vm} read")
-        return {"vm": vm, "root_password": self.panel.root_password(vm)}
-
-    def set_root_password(self, vm: str, confirm: str, password: str | None = None) -> dict:
-        self._vm(vm, confirm, changing=True)
-        password = password or "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
-        self._audit(f"root-password {vm} set")
-        r = self.panel.set_root_password(vm, password)
-        self._audit(f"root-password {vm} set -> {r.get('state')}")
-        return {**r, "root_password": password}
-
-    def reinstall(self, vm: str, template: str, ssh_keys: list[str], confirm: str, confirm_destroy: str) -> dict:
-        """ERASES THE DISK. Needs confirm=<vm> AND confirm_destroy=<vm>. template and ssh_keys are names
-        as the panel shows them (see templates() and ssh_keys())."""
-        self._vm(vm, confirm, changing=True)
-        if confirm_destroy != vm:
-            raise ServiceError(f"reinstall erases VM {vm}: also repeat it as confirm_destroy={vm}")
-        templates, keys = self.panel.templates(vm), self.panel.ssh_keys(vm)
-        if template not in templates:
-            raise ServiceError(f"unknown template {template!r}; one of: {', '.join(templates)}")
-        missing = [k for k in ssh_keys if k not in keys]
-        if missing:
-            raise ServiceError(f"unknown SSH key(s) {missing}; stored in the panel: {', '.join(keys)}")
-        self._audit(f"reinstall {vm} template={template} ssh_keys={','.join(ssh_keys)} requested")
-        r = self.panel.reinstall(vm, templates[template], [keys[k] for k in ssh_keys])
-        self._audit(f"reinstall {vm} -> {r}")
-        return r
-
-    def console_input(self, vm: str, text: str = "", keys: list[str] | None = None, confirm: str = "") -> dict:
-        self._vm(vm, confirm, changing=True)
-        self._audit(f"console {vm} text={len(text)} chars keys={' '.join(keys or [])}")
-        from .console import Console
-        with Console(*self.panel.console_session(vm)) as c:
-            c.type(text)
-            c.keys(*(keys or []))
-        return {"sent": True}
+    def check(self, vm: str) -> dict[str, str]:
+        """`cbrm doctor`: for every feature, read-only proof that the panel still offers what it needs."""
+        from .errors import PanelError
+        out = {}
+        for f in REGISTRY.values():
+            ctx = Ctx(self.panel)
+            try:
+                if f.check:
+                    f.check(ctx, vm)
+                elif f.risk == "read" and f.returns == "json" and not any(p.required for p in f.params):
+                    f.run(ctx, vm)
+                else:
+                    out[f.name] = "untested"
+                    continue
+                out[f.name] = "ok"
+            except (PanelError, ServiceError, KeyError, StopIteration, AttributeError) as e:
+                out[f.name] = f"BROKEN: {e}"
+        return out

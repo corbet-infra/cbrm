@@ -3,20 +3,26 @@ from pathlib import Path
 
 import pytest
 
-from cbrm.service import Service, ServiceError
+from cbrm.errors import ContractError, ServiceError
+from cbrm.features import REGISTRY
+from cbrm.service import Service
+
+FIXTURE = (Path(__file__).parent / "fixtures" / "product.html").read_text()
 
 
 class FakePanel:
-    def __init__(self, tmp: Path):
-        self.state_dir, self.calls = tmp, []
+    def __init__(self, tmp: Path, html: str = FIXTURE):
+        self.state_dir, self.calls, self.html = tmp, [], html
 
-    def products(self): return {"1": "p1", "2": "p2"}
+    def products(self): return {"1": "2", "3": "4"}
+    def page(self, path): return self.html
     def status(self, vm): return {"vm": vm, "state": "Online"}
-    def power(self, vm, action): self.calls.append((vm, action)); return {"state": "success"}
+    def power(self, vm, action): self.calls.append(("power", vm, action)); return {"state": "success"}
     def templates(self, vm): return {"Arch Linux": "53"}
     def ssh_keys(self, vm): return {"Personal": "1839"}
-    def reinstall(self, vm, t, k): self.calls.append((vm, "reinstall", t, tuple(k))); return {"state": "success"}
     def root_password(self, vm): return "secret-value"
+    def reinstall(self, vm, t, k): self.calls.append(("reinstall", vm, t, tuple(k))); return {"state": "success"}
+    def get_json(self, path, params=None): self.calls.append(("get", path, params)); return {"state": "success"}
 
 
 @pytest.fixture
@@ -24,51 +30,70 @@ def svc(tmp_path):
     return Service(FakePanel(tmp_path), allow=["1"])
 
 
-def test_allow_list_limits_reading(svc):
+def test_allow_list(svc):
     assert [v["vm"] for v in svc.vms()] == ["1"]
     with pytest.raises(ServiceError):
-        svc.status("2")
+        svc.run("status", "3")
 
 
-def test_changing_needs_the_target_repeated(svc):
-    for confirm in ("", "2", None):
+@pytest.mark.parametrize("name", [n for n, f in REGISTRY.items() if f.risk != "read"])
+def test_every_non_read_feature_needs_confirm(svc, name):
+    with pytest.raises(ServiceError):
+        svc.run(name, "1", {}, confirm="3")
+    assert svc.panel.calls == []
+
+
+def test_destroy_needs_both_confirmations(svc):
+    args = {"template": "Arch Linux", "ssh_keys": ["Personal"]}
+    for c, d in (("1", None), ("1", "3"), (None, "1")):
         with pytest.raises(ServiceError):
-            svc.power("1", "restart", confirm)
+            svc.run("reinstall", "1", args, confirm=c, confirm_destroy=d)
+    assert svc.panel.calls == []
+    svc.run("reinstall", "1", args, confirm="1", confirm_destroy="1")
+    assert svc.panel.calls == [("reinstall", "1", "53", ("1839",))]
+
+
+def test_dry_run_sends_nothing(svc):
+    r = svc.run("reinstall", "1", {"template": "Arch Linux"}, dry_run=True)
+    assert r["dry_run"] and "reinstall" in r["would"] and svc.panel.calls == []
+
+
+def test_unknown_names_and_arguments_are_refused(svc):
+    with pytest.raises(ServiceError):
+        svc.run("reinstall", "1", {"template": "Arch"}, confirm="1", confirm_destroy="1")
+    with pytest.raises(ServiceError):
+        svc.run("status", "1", {"bogus": 1})
+    with pytest.raises(ServiceError):
+        svc.run("power", "1", {"action": "reinstall"}, confirm="1")
     assert svc.panel.calls == []
 
 
-def test_power_is_audited(svc):
-    assert svc.power("1", "restart", "1") == {"state": "success"}
-    assert svc.panel.calls == [("1", "restart")]
-    log = svc.audit_path.read_text()
-    assert "power 1 restart requested" in log and "power 1 restart ->" in log
-
-
-def test_unknown_action_is_refused(svc):
+def test_secrets_never_reach_the_audit_log(svc):
     with pytest.raises(ServiceError):
-        svc.power("1", "reinstall", "1")
-    assert svc.panel.calls == []
-
-
-def test_reinstall_needs_both_confirmations(svc):
-    for c, d in (("1", ""), ("1", "2"), ("", "1"), ("2", "1")):
-        with pytest.raises(ServiceError):
-            svc.reinstall("1", "Arch Linux", ["Personal"], c, d)
-    assert svc.panel.calls == []
-    svc.reinstall("1", "Arch Linux", ["Personal"], "1", "1")
-    assert svc.panel.calls == [("1", "reinstall", "53", ("1839",))]
-
-
-def test_reinstall_refuses_unknown_names(svc):
-    with pytest.raises(ServiceError):
-        svc.reinstall("1", "Arch", ["Personal"], "1", "1")
-    with pytest.raises(ServiceError):
-        svc.reinstall("1", "Arch Linux", ["nope"], "1", "1")
-    assert svc.panel.calls == []
-
-
-def test_root_password_is_audited_without_value(svc):
-    with pytest.raises(ServiceError):
-        svc.root_password("1", "")
-    assert svc.root_password("1", "1")["root_password"] == "secret-value"
+        svc.run("root-password", "1")
+    assert svc.run("root-password", "1", confirm="1")["root_password"] == "secret-value"
     assert "secret-value" not in svc.audit_path.read_text()
+
+
+def test_parsers_against_the_panel_snapshot(svc):
+    assert svc.run("drives", "1") == [{"drive": "ide0", "content": ""}, {"drive": "ide2", "content": "nixos-installer.iso"}]
+    assert [i["key"] for i in svc.run("boot-order", "1")] == ["scsi0", "ide0", "net0"]
+
+
+def test_boot_order_must_be_a_permutation(svc):
+    with pytest.raises(ServiceError):
+        svc.run("boot-order-set", "1", {"order": ["ide0", "scsi0"]}, confirm="1")
+    r = svc.run("boot-order-set", "1", {"order": ["ide0", "scsi0", "net0"]}, dry_run=True)
+    assert "boot_order=ide0;scsi0;net0" in r["would"]
+
+
+def test_a_changed_panel_stops_before_sending(tmp_path):
+    changed = FIXTURE.replace("boot_order", "boot_sequence").replace("unmountIso", "ejectIso")
+    svc = Service(FakePanel(tmp_path, changed), allow=["1"])
+    with pytest.raises(ContractError):
+        svc.run("boot-order-set", "1", {"order": ["ide0", "scsi0", "net0"]}, confirm="1")
+    with pytest.raises(ContractError):
+        svc.run("iso-unmount", "1", {"drive": "ide2"}, confirm="1")
+    assert svc.panel.calls == []
+    report = svc.check("1")
+    assert report["boot-order-set"].startswith("BROKEN") and report["iso-unmount"].startswith("BROKEN")

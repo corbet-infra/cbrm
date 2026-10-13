@@ -19,26 +19,53 @@ do in the panel with their own login.
 
 ## What it can do
 
-| Area | CLI | API | MCP tool | Changes the server |
-|---|---|---|---|---|
-| All servers of the account | `cbrm vms` | `GET /vms` | `bero_vms` | no |
-| Status: state, hostname, IPv4/IPv6, last backup, last installed template | `cbrm status <vm>` | `GET /vms/{vm}` | `bero_status` | no |
-| Action log (installs, restarts, starts) | `cbrm logs <vm>` | `GET /vms/{vm}/logs` | `bero_logs` | no |
-| Console screenshot | `cbrm console <vm> out.png` | `GET /vms/{vm}/console.png` | `bero_console` | no |
-| Power: start, stop, shutdown, restart | `cbrm power <vm> <action> --confirm <vm>` | `POST /vms/{vm}/power` | `bero_power` | **yes** |
-| Console input: text and keys | `cbrm input <vm> --text … --key enter --confirm <vm>` | `POST /vms/{vm}/console/input` | `bero_console_input` | **yes** |
-| Installable templates, stored SSH keys | `cbrm templates <vm>`, `cbrm ssh-keys <vm>` | `GET /vms/{vm}/templates`, `/ssh-keys` | `bero_templates`, `bero_ssh_keys` | no |
-| Root password: show, set or generate | `cbrm root-password <vm> --confirm <vm>`, `cbrm set-root-password <vm> --confirm <vm>` | `POST /vms/{vm}/root-password/reveal`, `/root-password` | `bero_root_password`, `bero_set_root_password` | showing: audited; setting: **yes** |
-| Reinstall from a template, SSH keys baked in | `cbrm reinstall <vm> --template "Arch Linux" --ssh-key <name> --confirm <vm> --confirm-destroy <vm>` | `POST /vms/{vm}/reinstall` | `bero_reinstall` | **erases the disk** |
+Every operation is one entry of a registry; the CLI (`cbrm <feature> <vm> …`), the HTTP API
+(`POST /vms/{vm}/{feature}`) and the MCP server (`bero_<feature>`) are generated from it, so all
+three offer the same features with the same rules. `cbrm features` lists them.
 
-Every changing operation repeats its target (`--confirm <vm>` / `confirm`) and is written to an audit
-log (secrets never are). A reinstall erases the disk and therefore needs the target twice
-(`--confirm` and `--confirm-destroy`). Not included yet: backups and restore, network reset, ISO and
-boot order, renewals, upgrades and credit.
+<!-- features:begin (generated from the registry; tests/test_docs.py keeps it complete) -->
+| Feature | Risk | Arguments | What it does |
+|---|---|---|---|
+| `boot-order` | read | – | Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network) |
+| `console` | read | `--out` | A screenshot of the VNC console (PNG) |
+| `drives` | read | – | The VM's CD drives and what is inserted |
+| `isos` | read | `--search`? | ISO images the panel can insert (public ones and the account's own), optionally filtered |
+| `logs` | read | `--n`? | The panel's action log, newest first, in panel time (Europe/Berlin) |
+| `rescue` | read | – | Rescue system state and the available rescue images |
+| `ssh-keys` | read | – | SSH keys stored in the panel account: name -> id |
+| `status` | read | – | State, hostname, addresses, last backup and last installed template |
+| `templates` | read | – | Operating systems the panel can install: name -> template id |
+| `root-password` | secret | – | The root password as the panel shows it |
+| `boot-order-set` | change | `--order …` | Set the boot order: every device key from `boot-order`, first boots first |
+| `console-input` | change | `--text`? `--keys …`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...) |
+| `iso-add` | change | `--url` `--title` | Add your own ISO to the account from a public download URL (kept at least 6 months) |
+| `iso-mount` | change | `--drive` `--iso` | Insert an ISO (id, title or file name from `isos`) into a CD drive |
+| `iso-unmount` | change | `--drive` | Remove the ISO from a CD drive |
+| `power` | change | `--action` | Start, stop (hard), shut down (ACPI) or restart the VM |
+| `rescue-disable` | change | – | Leave the rescue system |
+| `rescue-enable` | change | `--image` | Boot the next time into a rescue image (id or title from `rescue`) |
+| `set-root-password` | change | `--password`? | Set the root password (generated if omitted); returns it |
+| `reinstall` | destroy | `--template` `--ssh-keys …`? | Reinstall from a template with stored SSH keys baked in. ERASES THE DISK |
+<!-- features:end -->
 
-A typical fresh start with your own operating system: `cbrm reinstall <vm> --template "Arch Linux"
---ssh-key <your key> …`, wait until SSH answers with your key, then install what you like over SSH
-(for example with nixos-anywhere).
+| Risk | What cbrm requires |
+|---|---|
+| read | nothing |
+| secret | `--confirm <vm>`; audited without the value |
+| change | `--confirm <vm>`; audited; checked afterwards where the panel shows the effect (`verified`) |
+| destroy | `--confirm <vm>` and `--confirm-destroy <vm>` |
+| cost | `--confirm <vm>` and `--confirm-cost <amount>` (none implemented yet) |
+
+Every changing command takes `--dry-run`: cbrm reads the panel, checks everything, and shows the exact
+request it would send — without sending it.
+
+### When BERO changes the panel
+
+cbrm checks before every change that the panel still offers exactly what the feature relies on (the
+Livewire component and method, the form, the endpoint in the page's own script). If anything differs it
+stops with "the panel changed, nothing was sent" (HTTP 409, an MCP tool error) instead of guessing.
+`cbrm doctor <vm>` runs these checks for every feature, read-only — run it on a schedule to learn about
+a panel change before you need the feature.
 
 ## Install
 
@@ -63,9 +90,9 @@ Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pi
 ```sh
 export CBRM_CREDENTIALS_CMD="pass show hosting/bero-host"
 cbrm vms
-cbrm logs 10002 -n 5
-cbrm console 10002 screen.png
-cbrm power 10002 restart --confirm 10002
+cbrm logs 10002 --n 5
+cbrm console 10002 --out screen.png
+cbrm power 10002 --action restart --confirm 10002
 ```
 
 ## MCP
@@ -81,6 +108,14 @@ With a shared API the assistant never sees the panel password:
 `"env": { "CBRM_API_URL": "https://cbrm.example.internal", "CBRM_API_TOKEN": "…" }`.
 The skill [`skills/bero/SKILL.md`](skills/bero/SKILL.md) teaches an agent the safe order of work
 (read, confirm, act, look again); copy it into your agent's skill directory.
+
+## Recipes
+
+| Goal | Steps |
+|---|---|
+| Fresh template with your SSH key | `cbrm reinstall <vm> --template "Arch Linux" --ssh-keys <name> --confirm <vm> --confirm-destroy <vm>`, then `ssh root@<ip>` |
+| Boot your own ISO | `cbrm iso-add <vm> --url <https url> --title <t> --confirm <vm>` → `cbrm isos <vm> --search <t>` → `cbrm iso-mount <vm> --drive ide0 --iso <id> --confirm <vm>` → `cbrm boot-order-set <vm> --order ide0 scsi0 net0 ide2 --confirm <vm>` → `cbrm power <vm> --action restart --confirm <vm>` → `cbrm console <vm> --out s.png` |
+| Hung server | `cbrm console` → `cbrm power --action restart` → `cbrm console` |
 
 ## How it works
 
