@@ -2,6 +2,7 @@
 renderings (tests/fixtures) and a fake panel without network: parsers, risk gating, dry runs that send nothing,
 the request each change sends, verification, and refusal when the panel looks different."""
 import base64
+import datetime
 import hashlib
 import json
 import re
@@ -12,7 +13,7 @@ import httpx
 import pytest
 
 from cbrm.errors import ContractError, PanelError, ServiceError
-from cbrm.features import REGISTRY, account, common
+from cbrm.features import REGISTRY, account, common, tasks
 from cbrm.features.common import plain
 from cbrm.service import Service
 
@@ -130,6 +131,12 @@ def svc(tmp_path):
     return svc_for(tmp_path)
 
 
+@pytest.fixture(autouse=True)
+def panel_clock(monkeypatch):
+    """The scheduled tasks refuse a start in the past: pin 'now' (panel time) so the fixed dates below stay in the future."""
+    monkeypatch.setattr(tasks, "_panel_now", lambda: datetime.datetime(2026, 10, 13, 12, 0))
+
+
 def sent_nothing(svc):
     wire, forms, gets = svc.panel.http.sent
     return wire == [] and forms == [] and gets == []
@@ -199,7 +206,7 @@ def test_stats_refuse_answers_that_changed(svc):
 NEW = {"addresses": "read", "backups": "read", "automatic-backup-status": "read", "tasks": "read", "stats": "read",
        "stats-history": "read", "renewal": "read", "account-credit": "read", "account-ssh-keys": "read",
        "rdns-set": "change", "hostname-set": "change", "rename": "change", "backup-create": "change",
-       "task-create": "change", "task-delete": "change", "account-ssh-key-import": "change",
+       "task-create": "destroy", "task-delete": "change", "account-ssh-key-import": "change",
        "account-ssh-key-delete": "change", "network-reset": "destroy", "backup-delete": "destroy",
        "backup-restore": "destroy"}
 
@@ -372,7 +379,8 @@ def with_second_task(page: str) -> str:
 def test_task_create_follows_the_panels_form_and_verifies(svc):
     svc.panel.http.hooks["/customer/rootserver/1/scheduled_task/create"] = lambda: svc.panel.pages.__setitem__(
         P, with_second_task(PRODUCT))
-    r = svc.run("task-create", "1", {"action": "restart", "interval": "weekly", "start": "2026-10-20T03:30"}, confirm="1")
+    r = svc.run("task-create", "1", {"action": "restart", "interval": "weekly", "start": "2026-10-20T03:30"}, confirm="1",
+                confirm_destroy="1")
     assert svc.panel.http.forms == [("/customer/rootserver/1/scheduled_task/create", {
         "_token": "TOKEN", "methode": "restart", "interval": "weekly", "next_execution_at": "2026-10-20T03:30"})]
     assert r["verified"] is True

@@ -13,7 +13,8 @@ authors = [{ name = "Julian Y. Richard Corbet" }]
 keywords = ["bero-host", "bero", "kvm", "vps", "rootserver", "proxmox", "novnc", "mcp", "cli", "hosting"]
 classifiers = ["Programming Language :: Python :: 3", "Environment :: Console", "Intended Audience :: System Administrators", "Topic :: System :: Systems Administration"]
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.27", "selectolax>=0.3.21", "websockets>=12", "vncdotool>=1.2", "pillow>=10", "mcp>=1.2", "fastapi>=0.110", "uvicorn>=0.29"]
+dependencies = ["httpx>=0.27", "selectolax>=0.3.21", "websockets>=12", "vncdotool>=1.2", "pillow>=10", "mcp>=1.2", "fastapi>=0.110", "uvicorn>=0.29",
+                "tzdata; sys_platform == 'win32'"]  # zoneinfo has no system database there
 
 [project.urls]
 Homepage = "https://git.corbet.ch/corbet-infra/cbrm"
