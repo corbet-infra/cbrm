@@ -31,7 +31,7 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 | What happened to it? | `bero_logs`: reinstalls, restarts, starts (panel time, Europe/Berlin) |
 | Hung server | `bero_console` → `bero_power(action="restart", confirm=vm)` → `bero_console` |
 | Fresh OS with your key | `bero_templates`, `bero_ssh_keys` → `bero_reinstall(template, ssh_keys=[name], confirm=vm, confirm_destroy=vm)` → SSH |
-| Boot your own ISO | `bero_iso_add(url, title, confirm=vm)` → `bero_isos(search=title)` → `bero_iso_mount(drive="ide0", iso=id, confirm=vm)` → `bero_boot_order_set(order=["ide0", ...], confirm=vm)` → `bero_power(action="restart", confirm=vm)` → `bero_console` |
+| Boot your own ISO | `bero_iso_add(url, title, confirm=vm)` (the panel downloads in the background; wait) → `bero_isos(search=title)` → `bero_iso_mount(drive="ide2", iso=id, confirm=vm)` (must be `verified: true`) → keep one CD drive (`bero_drive_delete`) → **then** `bero_boot_order_set(order=["ide2","scsi0","net0"], confirm=vm)` → `bero_power(stop)`, `bero_power(start)` → right away `bero_console_input(keys=["enter"], repeat=3, interval=0.5, confirm=vm)` to pick the ISO menu's default → `bero_console` |
 | Act at the console | `bero_console` → `bero_console_input(text=..., keys=["enter"], confirm=vm)` → `bero_console` |
 | Is cbrm still in sync with the panel? | `bero_doctor(vm)` |
 
