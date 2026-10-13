@@ -20,7 +20,8 @@ class Service:
         self.audit_path = audit or panel.state_dir / "audit.log"
 
     def _audit(self, line: str) -> None:
-        with self.audit_path.open("a") as f:
+        fd = os.open(self.audit_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with os.fdopen(fd, "a") as f:
             f.write(f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ} {line}\n")
 
     def _vm(self, vm: str, confirm: str | None = None, changing: bool = False) -> str:
