@@ -11,6 +11,7 @@
           dependencies = with pkgs.python3Packages; [ httpx selectolax websockets vncdotool pillow mcp fastapi uvicorn ];
           nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
           pythonImportsCheck = [ "cbrm" ];
+          meta.license = with pkgs.lib.licenses; [ lgpl3Only ];  # WITH LGPL-3.0-linking-exception, see LICENSE.md
         };
         default = cbrm;
       });

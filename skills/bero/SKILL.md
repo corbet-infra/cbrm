@@ -33,4 +33,4 @@ noVNC). Prefer the MCP tools (`bero_*`); the CLI `cbrm` has the same commands.
 
 `CBRM_USER` / `CBRM_PASSWORD`, or `CBRM_CREDENTIALS_CMD` (prints user and password on two lines, e.g.
 from a secret store), or `CBRM_API_URL` + `CBRM_API_TOKEN` to use a shared `cbrm serve`.
-Optional `CBRM_VMS="17761 17762"` limits everything to those VMs.
+Optional `CBRM_VMS="10001 10002"` limits everything to those VMs.

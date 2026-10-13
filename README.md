@@ -48,16 +48,16 @@ Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pi
 |---|---|
 | `CBRM_USER`, `CBRM_PASSWORD` | the panel login |
 | `CBRM_CREDENTIALS_CMD` | instead: a command that prints the user and the password on two lines (`pass`, `sops`, a vault CLI, …) |
-| `CBRM_VMS` | optional allow-list, e.g. `"17761 17762"`: every other server is refused |
+| `CBRM_VMS` | optional allow-list, e.g. `"10001 10002"`: every other server is refused |
 | `CBRM_API_URL`, `CBRM_API_TOKEN` | use a running `cbrm serve` instead of logging in yourself |
 | `XDG_STATE_HOME` | where the session cookie and `audit.log` live (`$XDG_STATE_HOME/cbrm`, mode 0700) |
 
 ```sh
 export CBRM_CREDENTIALS_CMD="pass show hosting/bero-host"
 cbrm vms
-cbrm logs 17762 -n 5
-cbrm console 17762 screen.png
-cbrm power 17762 restart --confirm 17762
+cbrm logs 10002 -n 5
+cbrm console 10002 screen.png
+cbrm power 10002 restart --confirm 10002
 ```
 
 ## MCP
@@ -66,7 +66,7 @@ For Claude Code, Claude Desktop or any MCP client (stdio):
 
 ```json
 { "mcpServers": { "bero": { "command": "cbrm-mcp",
-    "env": { "CBRM_CREDENTIALS_CMD": "pass show hosting/bero-host", "CBRM_VMS": "17761 17762" } } } }
+    "env": { "CBRM_CREDENTIALS_CMD": "pass show hosting/bero-host", "CBRM_VMS": "10001 10002" } } } }
 ```
 
 With a shared API the assistant never sees the panel password:
@@ -95,4 +95,6 @@ Please open issues and pull requests on the primary; changes pushed to a mirror 
 
 ## License
 
-See [LICENSE](LICENSE). Contributions are welcome under the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
+**LGPL-3.0-only WITH LGPL-3.0-linking-exception** — use cbrm from any application under any license;
+changes to cbrm itself stay open. Details in [LICENSE.md](LICENSE.md). Contributions are welcome under
+the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
