@@ -1,0 +1,874 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"><title>#1 (KVM Rootserver #2)</title></head>
+<body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<li class="nav-item px-3 px-xl-0">
+                                <div class="d-flex align-items-center ps-2 pt-1 pb-1 pe-2 color-bero-orange"
+                                     style="border: 2px solid #FE723A; border-radius: 10px; cursor: pointer;"
+                                     id="guthabenHeader">
+                                                                <span><b>Guthaben                                                                             0,00
+                                                                            €
+                                                                        </b></span>
+                                </div>
+
+                            </li>
+<h2 id="displayname" onclick="showchangeDisplayNameModal();" class="clickable-tag-cursor bottom-dot-border">
+    KVM Rootserver #2
+</h2>
+<p id="hostname" class="clickable-tag-cursor bottom-dot-border" onclick="showChangeHostnameModal();">
+    kvm2.example.test
+</p>
+<div class="modal fade" id="changeDisplayNameModal" tabindex="-1" aria-labelledby="changeDisplayNameModalTitle"
+     style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-header bg-bero-gradient bero-modal-header">
+                <h1 class="modal-title fs-5"
+                    id="changeDisplayNameModalTitle">Produkt umbenennen</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <form onsubmit="return changeDisplayName();">
+                        <div class="form-group mb-4 w-100">
+                            <input type="text" class="form-control  bero-form-bg-grey" id="displaynameChangeInput"
+                                   placeholder="Mein cooler Server"
+                                   minlength="2" maxlength="35" value="KVM Rootserver #2" required>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <div>
+                                <button class="btn default-button"
+                                        style=""
+                                        type="submit">
+                                    Produkt umbenennen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const changeDisplayNameModal = new bootstrap.Modal(document.getElementById('changeDisplayNameModal'));
+
+    function showchangeDisplayNameModal() {
+        changeDisplayNameModal.show();
+    }
+
+    function changeDisplayName() {
+        $.post('https://bero-host.de/customer/service/setdisplayname/2', {
+            _token: 'TOKEN',
+            displayname: document.getElementById('displaynameChangeInput').value,
+        }, function (response) {
+            if (response.state == "success") {
+                createBeroSuccessToast(response.message);
+                document.getElementById("displayname").innerText = response.displayname;
+            } else {
+                //do smth with error
+                createBeroErrorToast(response.message);
+            }
+            changeDisplayNameModal.hide();
+        }, 'json');
+
+        return false;
+    }
+</script>
+<div class="modal fade" id="changeHostNameModal" tabindex="-1" aria-labelledby="changeHostNameModalTitle"
+    style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-header bg-bero-gradient bero-modal-header">
+                <h1 class="modal-title fs-5" id="changeHostNameModalTitle">Hostname ändern</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <form onsubmit="return changeHostname();">
+                        <div class="form-group mb-4 w-100">
+                            <input type="text" class="form-control bero-form-bg-grey" id="hostnameChangeInput"
+                                   placeholder="Hostname"
+                                   minlength="2" maxlength="255" value="kvm1.example.test" required>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <div>
+                                <button class="btn default-button"
+                                        style=""
+                                        type="submit">
+                                    Hostname setzen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const changeHostNameModal = new bootstrap.Modal(document.getElementById('changeHostNameModal'));
+
+    function showChangeHostnameModal() {
+        changeHostNameModal.show();
+    }
+
+    function changeHostname() {
+
+        $.post('https://bero-host.de/customer/rootserver/1/sethostname', {
+            _token: 'TOKEN',
+            hostname: document.getElementById('hostnameChangeInput').value,
+        }, function(response) {
+            if (response.state == "success") {
+                createBeroSuccessToast(response.message);
+                document.getElementById("hostname").innerText = response.hostname;
+            } else {
+                //do smth with error
+                createBeroErrorToast(response.message);
+            }
+            changeHostNameModal.hide();
+        }, 'json');
+
+        return false;
+    }
+</script>
+<div class="modal fade" id="networkResetModal" tabindex="-1" aria-labelledby="networkResetModalTitle"
+     style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-header bg-bero-gradient bero-modal-header">
+                <h1 class="modal-title fs-5" id="networkResetModalTitle">
+                    Netzwerk zurücksetzen
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <form onsubmit="return resetNetwork();">
+                        <p class="text-white">
+                            Diese Funktion setzt sämtliche Netzwerk Konfigurationen und Software Firewalls auf dem
+                            Server zurück.
+                            Wenn dein Server nicht mehr erreichbar ist, führe diese Funktion aus, um die Netzwerk
+                            Konfiguration zurückzusetzen.
+                            Meist ist dein Server danach wieder erreichbar.
+                        </p>
+                        <div class="d-flex justify-content-end mt-4">
+                            <div>
+                                <button class="btn default-button"
+                                        style=""
+                                        type="submit">
+                                    Netzwerk zurücksetzen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function resetNetwork() {
+        $.post('https://bero-host.de/customer/rootserver/1/resetnetwork', {
+            _token: 'TOKEN',
+            password: document.getElementById('changeRootpasswordPassword').value,
+            password_confirmation: document.getElementById('changeRootpasswordPasswordConfirmation').value
+        }, function (response) {
+            if (response.state == "success") {
+                //set rootpassword
+                createBeroSuccessToast(response.message);
+                location.reload()
+            } else {
+                //do smth with error
+                createBeroErrorToast(response.message);
+            }
+            networkResetModal.hide();
+        }, 'json');
+
+
+        return false;
+
+    }
+</script>
+<div class="modal fade" id="backupModal" tabindex="-1" aria-labelledby="backupModalTitle"
+     style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-header bg-bero-gradient bero-modal-header">
+                <h1 class="modal-title fs-5" id="backupModalTitle">
+                    Neues Backup
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <form onsubmit="return createBackup();">
+                        <input type="hidden" name="username">
+
+                        <div class="form-group mb-4 w-100">
+                            <input type="text" class="form-control bero-form-bg-grey" id="new_backup_name"
+                                   placeholder="Backup Name"
+                                   minlength="2" maxlength="255" name="title" required>
+                        </div>
+
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <div>
+                                <button class="btn default-button"
+                                        style=""
+                                        type="submit">
+                                    Erstellen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const backupModal = new bootstrap.Modal(document.getElementById('backupModal'));
+
+    function showbackupModal() {
+        backupModal.show();
+    }
+
+    function createBackup() {
+
+        $.post('https://bero-host.de/customer/rootserver/1/backup/create', {
+            _token: 'TOKEN',
+            title: document.getElementById('new_backup_name').value,
+
+        }, function (response) {
+            if (response.state == "success") {
+                createBeroSuccessToast(response.message);
+            } else {
+                //do smth with error
+                createBeroErrorToast(response.message);
+            }
+            backupModal.hide();
+        }, 'json');
+
+        return false;
+    }
+
+</script>
+<script>
+        const recreateBackupModal = new bootstrap.Modal(document.getElementById('recreateBackupModal'));
+
+
+        let toberestoreBackup = 0;
+        let liverestore = '1';
+
+        function showRecreateBackupModal(id) {
+            toberestoreBackup = id;
+            $('#backupRestoreModalContentOverview').show();
+            $('#backupRestoreModalContentServerRestore').hide();
+            document.getElementById("liveRestoreBackupOptionInput").checked = true;
+            liverestore = '1';
+            recreateBackupModal.show();
+        }
+
+        function restoreBackup() {
+            id = toberestoreBackup;
+            $.getJSON('https://bero-host.de/customer/rootserver/1/backup/restore/' + id + '?liverestore=' + liverestore, function (response) {
+                if (response.state == 'success') {
+                    createBeroSuccessToast(response.message);
+                } else if (response.state == 'failed') {
+                    createBeroErrorToast(response.message);
+                } else {
+                    createBeroWarningToast(response.message);
+                }
+            });
+            recreateBackupModal.hide();
+        }
+
+        function setLiveRestoreOption() {
+            if (document.getElementById("liveRestoreBackupOptionInput").checked) {
+                liverestore = '1';
+            } else {
+                liverestore = '0';
+            }
+        }
+
+
+    </script>
+<script>
+        const deleteBackupModal = new bootstrap.Modal(document.getElementById('deleteBackupModal'));
+
+        let tobebackUpDelete = 0;
+
+        function showDeleteBackupModal(id) {
+            tobebackUpDelete = id;
+            deleteBackupModal.show();
+        }
+
+        function deleteBackup() {
+            id = tobebackUpDelete;
+            $.getJSON('https://bero-host.de/customer/rootserver/1/backup/delete/' + id, function (response) {
+                if (response.state == 'success') {
+                    createBeroSuccessToast(response.message);
+                } else if (response.state == 'failed') {
+                    createBeroErrorToast(response.message);
+                } else {
+                    createBeroWarningToast(response.message);
+                }
+            });
+
+            deleteBackupModal.hide();
+        }
+    </script>
+<div class="modal fade" id="createTask" tabindex="-1" aria-labelledby="createTaskTitle"
+     style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-black bero-modal-content">
+            <div class="modal-header bg-bero-gradient bero-modal-header">
+                <h1 class="modal-title fs-5" id="createTaskTitle">Aufgabe anlegen</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <form onsubmit="return createTaskFunction();">
+                        <input type="hidden" name="username">
+
+                        <p class="text-white">
+                            Eine Automatisierung ist eine Aktion, welche regelmäßig und automatisch für dein Produkt ausgeführt wird.
+                        </p>
+
+                        <div>
+                            <div class="form-floating">
+                                <select class="form-select form-select mb-3 bero-form-bg-grey"
+                                        id="create_task_method_select"
+                                        name="methode"
+                                        aria-label="Methode">
+                                                                            <option value="dump">Backup erstellen</option>
+                                                                            <option value="start">Starten</option>
+                                                                            <option value="restart">Neustarten</option>
+                                                                            <option value="shutdown">Stoppen</option>
+                                                                            <option value="stop">Killen</option>
+                                                                    </select>
+
+                                <label class="text-white">Action</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="form-floating">
+                                <select class="form-select form-select mb-3 bero-form-bg-grey"
+                                        id="create_task_interval_select"
+                                        name="interval"
+                                        aria-label="interval">
+                                                                            <option value="daily">Täglich</option>
+                                                                            <option value="2-days">Alle 2 Tage</option>
+                                                                            <option value="3-days">Alle 3 Tage</option>
+                                                                            <option value="5-days">Alle 5 Tage</option>
+                                                                            <option value="weekly">Wöchentlich</option>
+                                                                            <option value="2-weeks">Alle 2 Wochen</option>
+                                                                            <option value="monthly">Monatlich</option>
+                                                                            <option value="yearly">Jährlich</option>
+                                                                    </select>
+                                <label class="text-white">Interval</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="form-floating">
+                                <input type="datetime-local" class="form-control bero-form-bg-grey"
+                                       aria-describedby="Next Execution" id="next_execution_at_create_task"
+                                       name="next_execution_at" value="2026-10-13 20:20"
+                                       required>
+                                <label class="text-white">Startzeitpunkt</label>
+                            </div>
+                        </div>
+
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <div>
+                                <button class="btn default-button"
+                                        style=""
+                                        type="submit">
+                                    Aufgabe anlegen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const createTask = new bootstrap.Modal(document.getElementById('createTask'));
+
+    function showcreateTask() {
+        createTask.show();
+    }
+
+    function createTaskFunction() {
+
+        $.post('https://bero-host.de/customer/rootserver/1/scheduled_task/create', {
+            _token: 'TOKEN',
+            methode: document.getElementById('create_task_method_select').value,
+            interval: document.getElementById('create_task_interval_select').value,
+            next_execution_at: document.getElementById('next_execution_at_create_task').value,
+
+        }, function (response) {
+            if (response.state == 'success') {
+                createBeroSuccessToast(response.message);
+            } else if (response.state == 'failed') {
+                createBeroErrorToast(response.message);
+            } else {
+                createBeroWarningToast(response.message);
+            }
+            //location.reload();
+            createTask.hide();
+            Livewire.dispatch('update-automatic-backup-status');
+        }, 'json');
+
+        return false;
+    }
+
+</script>
+<script>
+    const deleteTaskModal = new bootstrap.Modal(document.getElementById('deleteTaskModal'));
+
+    let tobedeleteTask = 0;
+
+
+    function showDeleteTaskModal(id) {
+        tobedeleteTask = id;
+        deleteTaskModal.show();
+    }
+
+    function deleteTask() {
+        id = tobedeleteTask;
+        $.getJSON('https://bero-host.de/customer/rootserver/1/scheduled_task/delete/' + id, function (response) {
+            if (response.state == 'success') {
+                createBeroSuccessToast(response.message);
+            } else if (response.state == 'failed') {
+                createBeroErrorToast(response.message);
+            } else {
+                createBeroWarningToast(response.message);
+            }
+        });
+        deleteTaskModal.hide();
+    }
+
+</script>
+<script>
+$.getJSON('https://bero-host.de/customer/rootserver/1/updatestats', function (data) {});
+$.ajax({url: 'https://bero-host.de/customer/rootserver/1/live_statistics', method: 'GET'});
+$.ajax({url: 'https://bero-host.de/customer/rootserver/1/statistics?timeframe='+x+'&type=AVERAGE&data=' + y});
+    var secondsTillEnd = 94144952.161072;
+</script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [null, {&quot;class&quot;: &quot;App\\Models\\Rootserver&quot;, &quot;key&quot;: 1, &quot;s&quot;: &quot;mdl&quot;}], &quot;addresses&quot;: [[[{&quot;id&quot;: 1, &quot;address&quot;: &quot;192.0.2.10&quot;, &quot;netmask&quot;: 24, &quot;gateway&quot;: &quot;192.0.2.1&quot;, &quot;version&quot;: 4, &quot;rdns&quot;: &quot;ptr.default&quot;, &quot;traffic_in&quot;: 0, &quot;traffic_out&quot;: 0, &quot;traffic_total&quot;: 0}, {&quot;s&quot;: &quot;std&quot;}], [{&quot;id&quot;: 2, &quot;address&quot;: &quot;2001:db8:0:1::&quot;, &quot;netmask&quot;: 64, &quot;gateway&quot;: &quot;fe80::1&quot;, &quot;version&quot;: 6, &quot;rdns&quot;: &quot;default.rdns.example&quot;, &quot;traffic_in&quot;: 0, &quot;traffic_out&quot;: 0, &quot;traffic_total&quot;: 0}, {&quot;s&quot;: &quot;std&quot;}]], {&quot;class&quot;: &quot;Illuminate\\Support\\Collection&quot;, &quot;s&quot;: &quot;clctn&quot;}], &quot;currentAddress&quot;: [{&quot;id&quot;: 1, &quot;address&quot;: &quot;192.0.2.10&quot;, &quot;netmask&quot;: 24, &quot;gateway&quot;: &quot;192.0.2.1&quot;, &quot;version&quot;: 4, &quot;rdns&quot;: &quot;ptr.default&quot;, &quot;traffic_in&quot;: 0, &quot;traffic_out&quot;: 0, &quot;traffic_total&quot;: 0}, {&quot;s&quot;: &quot;std&quot;}], &quot;rdnsEntry&quot;: &quot;&quot;, &quot;paginators&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.i-p-table&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.products.rootserver.i-p-table">
+
+    <div>
+        <div class="d-flex justify-content-between">
+            <h2>
+                Netzwerk
+            </h2>
+            <div class="d-flex justify-content-start flex-wrap">
+                <div>
+                    <button class="btn default-button" data-bs-toggle="modal" data-bs-target="#networkResetModal">
+                        Netzwerk-Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="flex-row p-2 mt-3 fw-bold responsive-flex-table-container d-none d-xl-flex"
+             style="background-color: black; color: white; border-radius: 10px;">
+            <p class="m-0 fs-5 ps-xl-2" style="width: 25%;">
+                IP-Adresse
+            </p>
+            <p class="m-0 fs-5" style="width: 20%;">
+                Traffic eingehend
+            </p>
+            <p class="m-0 fs-5" style="width: 20%;">
+                Traffic ausgehend
+            </p>
+            <p class="m-0 fs-5" style="width: 20%;">
+                Traffic gesamt
+            </p>
+            <p class="m-0 fs-5" style="width: 15%;">
+                Aktionen
+            </p>
+        </div>
+        <!--[if BLOCK]><![endif]-->            <div class="mt-2 mb-2 grey-transparent-background" style="border-radius: 10px;">
+                <div class="d-flex flex-row p-3 align-items-center responsive-flex-table-container"
+                     style="border-radius: 10px; ">
+                    <p class="m-0 fs-6 ps-xl-2" style="width: 25%;">
+                        <b class="d-inline d-xl-none">IP-Adresse: </b>
+                        <!--[if BLOCK]><![endif]-->                            192.0.2.10
+                        <!--[if ENDBLOCK]><![endif]-->                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic eingehend
+                            : </b>0.00B
+                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic ausgehend
+                            : </b>0.00B
+                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic gesamt
+                            : </b>0.00B
+                    </p>
+                    <div class="d-flex flex-wrap m-0 fs-6" style="width: 15%;">
+                        <div class="m-1">
+                            <button class="btn default-button" type="button"
+                                    wire:click="openRdnsModal('192.0.2.10')">
+                                rDNS
+                            </button>
+                        </div>
+                        <div class="m-1">
+                            <button class="btn default-button" type="button"
+                                    wire:click="openInfoModal('192.0.2.10')">
+                                Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                    <div class="mt-2 mb-2 grey-transparent-background" style="border-radius: 10px;">
+                <div class="d-flex flex-row p-3 align-items-center responsive-flex-table-container"
+                     style="border-radius: 10px; ">
+                    <p class="m-0 fs-6 ps-xl-2" style="width: 25%;">
+                        <b class="d-inline d-xl-none">IP-Adresse: </b>
+                        <!--[if BLOCK]><![endif]-->                            2001:db8:0:1::/64
+                        <!--[if ENDBLOCK]><![endif]-->                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic eingehend
+                            : </b>0.00B
+                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic ausgehend
+                            : </b>0.00B
+                    </p>
+                    <p class="m-0 fs-6" style="width: 20%;">
+                        <b class="d-inline d-xl-none">Traffic gesamt
+                            : </b>0.00B
+                    </p>
+                    <div class="d-flex flex-wrap m-0 fs-6" style="width: 15%;">
+                        <div class="m-1">
+                            <button class="btn default-button" type="button"
+                                    wire:click="openRdnsModal('2001:db8:0:1::')">
+                                rDNS
+                            </button>
+                        </div>
+                        <div class="m-1">
+                            <button class="btn default-button" type="button"
+                                    wire:click="openInfoModal('2001:db8:0:1::')">
+                                Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->
+    </div>
+
+    <div wire:ignore.self class="modal fade" id="networkRdnsModal" tabindex="-1" style="display: none;"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-black bero-modal-content">
+                <div class="modal-header bg-bero-gradient bero-modal-header">
+                    <h1 class="modal-title fs-5">
+                        rDNS Eintrag ändern
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <form wire:submit="changeRdns()">
+                            <div class="form-group mb-4 w-100">
+                                <p class="text-white">
+                                    Der Reverse DNS (rDNS) Eintrag löst deine IP-Adresse 192.0.2.10 zu einem Domainnamen auf. Diese Funktion wird hauptsächlich für Mailserver benötigt.
+                                </p>
+                            </div>
+                            <div class="form-group mb-4 w-100">
+                                <input type="text" class="form-control bero-form-bg-grey"
+                                       placeholder="rDNS Eintrag"
+                                       minlength="2" maxlength="255" name="entry" wire:model.live="rdnsEntry" required>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <div>
+                                    <button class="btn default-button" type="submit">
+                                        Speichern
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="infoForAddress" tabindex="-1"
+         aria-labelledby="infoForAddressTitle"
+         style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-black bero-modal-content">
+                <div class="modal-header bg-bero-gradient bero-modal-header">
+                    <h1 class="modal-title fs-5" id="infoForAddressTitle">IP-Adresse Informationen</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <p class="text-white">
+                            IP-Adresse: 192.0.2.10
+                        </p>
+                        <p class="text-white">
+                            Netzmaske
+                            : 255.255.255.0
+                        </p>
+                        <p class="text-white">
+                            Netzmaske CIDR: /24
+                        </p>
+                        <p class="text-white">
+                            Gateway: 192.0.2.1
+                        </p>
+                        <p class="text-white">
+                            Befehl zum Hinzufügen unter Debian/Ubuntu
+                        </p>
+                        <div class="form-group mb-4 w-100">
+                            <input type="text" class="form-control bero-form-bg-grey"
+                                   value="ip addr add 192.0.2.10/24 dev eth0"
+                                   disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [null, {&quot;class&quot;: &quot;App\\Models\\Rootserver&quot;, &quot;key&quot;: 1, &quot;s&quot;: &quot;mdl&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.backup&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.products.rootserver.backup">
+
+    <div class="d-flex justify-content-center flex-wrap">
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!--[if BLOCK]><![endif]-->            <div class="rootserver-backup-container rootserver-backup-item-new p-4 d-flex justify-content-center align-items-center"
+                 onclick="newBackup();">
+                <div class="d-flex flex-column justify-content-center align-items-center">
+                    <i class="fa-solid fa-plus fa-3x"></i>
+                    <p class="m-0">
+                        Neues Backup
+                    </p>
+                </div>
+
+            </div>
+                    <div class="rootserver-backup-container rootserver-backup-item-new p-4 d-flex justify-content-center align-items-center"
+                 onclick="newBackup();">
+                <div class="d-flex flex-column justify-content-center align-items-center">
+                    <i class="fa-solid fa-plus fa-3x"></i>
+                    <p class="m-0">
+                        Neues Backup
+                    </p>
+                </div>
+
+            </div>
+                    <div class="rootserver-backup-container rootserver-backup-item-new p-4 d-flex justify-content-center align-items-center"
+                 onclick="newBackup();">
+                <div class="d-flex flex-column justify-content-center align-items-center">
+                    <i class="fa-solid fa-plus fa-3x"></i>
+                    <p class="m-0">
+                        Neues Backup
+                    </p>
+                </div>
+
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [null, {&quot;class&quot;: &quot;App\\Models\\Rootserver&quot;, &quot;key&quot;: 1, &quot;s&quot;: &quot;mdl&quot;}], &quot;taskSearch&quot;: &quot;&quot;, &quot;paginators&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.task&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.products.rootserver.task">
+    <div class="d-flex justify-content-center flex-wrap">
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <div class="rootserver-task-container rootserver-task-item-new p-4 d-flex justify-content-center align-items-center"
+             onclick="newTask();">
+            <div class="d-flex flex-column justify-content-center align-items-center">
+                <i class="fa-solid fa-plus fa-3x"></i>
+                <p class="m-0">
+                    Neue Aufgabe
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [null, {&quot;class&quot;: &quot;App\\Models\\Rootserver&quot;, &quot;key&quot;: 1, &quot;s&quot;: &quot;mdl&quot;}], &quot;lastBackupTimestamp&quot;: null, &quot;nextBackupTimestamp&quot;: null, &quot;autoBackupEnabled&quot;: false}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.automatic-backup-status&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.products.rootserver.automatic-backup-status">
+    <div>
+        <!--[if BLOCK]><![endif]-->            <span class="text-danger"><i class="fa fa-fw fa-exclamation-triangle"></i> Es wurde noch kein Backup angefertigt!</span>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+    <div>
+        <!--[if BLOCK]><![endif]-->            <div class="d-flex justify-content-between">
+                <p>
+                    <small class="text-danger" style="font-size: 0.8rem;">Auto-Backup deaktiviert.</small>
+                </p>
+                <div class="color-bero-orange" style="cursor: pointer;font-size: 0.8rem;" onclick="newTask();" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Automatische Backups aktivieren">
+                    Aktivieren
+                </div>
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;serviceId&quot;: 2, &quot;automaticPaymentId&quot;: 392, &quot;automaticRenewRuntimeId&quot;: 340}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.service.automatic-renew&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.service.automatic-renew">
+    <div class="rootserver-overview-row">
+        <div>
+            <p class="m-0">
+                Auto-Verlängerung:
+            </p>
+        </div>
+        <div>
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="d-flex justify-content-start">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input rootserver-restart-switch" type="checkbox" role="switch"
+                               id="serverRenewSwitchButton"  checked
+                                wire:click="toggleAutomaticRenew()">
+                    </div>
+                    <p class="m-0">
+                        <!--[if BLOCK]><![endif]-->                            Aktiviert
+                        <!--[if ENDBLOCK]><![endif]-->                    </p>
+                </div>
+                <!--[if BLOCK]><![endif]-->                    <a href="#" class="small text-nowrap" x-on:click.prevent="showSettings = ! showSettings">
+                        <i class="fa-solid fa-gear"></i>
+                        Einstellungen
+                    </a>
+                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+
+    <!--[if BLOCK]><![endif]-->        <div class="row g-2 small mt-0">
+            <div class="col-6 col-md-3">
+                <div class="text-muted">Verlängerung am</div>
+                <div>04.10.2029</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted">Laufzeit</div>
+                <div>
+                    365 Tage
+                    (365 Tage)
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted">Neue Laufzeit bis</div>
+                <div>07.10.2030</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted">Preis</div>
+                <div>
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    42,00 €
+                </div>
+            </div>
+            <!--[if BLOCK]><![endif]-->                <div class="col-12">
+                    <span class="text-muted">Zahlung:</span>
+                    <!--[if BLOCK]><![endif]-->                        <!--[if BLOCK]><![endif]-->                            42,00 € via PayPal (payer@example.test)
+                        <!--[if ENDBLOCK]><![endif]-->                    <!--[if ENDBLOCK]><![endif]-->                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </div>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    <!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        <div class="mt-2" x-show="showSettings" x-transition style="display: none;">
+            <!--[if BLOCK]><![endif]-->                <div class="form-floating pt-1 mb-2">
+                    <select class="form-select bero-form-bg-grey" id="automaticRenewRuntimeSelect"
+                            name="automaticRenewRuntimeSelect"
+                            aria-label="Laufzeit der automatischen Verlängerung"
+                            wire:model.live="automaticRenewRuntimeId">
+                        <!--[if BLOCK]><![endif]-->                            <option value="340" wire:key="automatic-renew-runtime-340">
+                                365 Tage – 42,00 €
+                                <!--[if BLOCK]><![endif]-->                                    (Standard)
+                                <!--[if ENDBLOCK]><![endif]-->                            </option>
+                                                    <option value="341" wire:key="automatic-renew-runtime-341">
+                                720 Tage – 84,00 €
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                            </option>
+                                                    <option value="342" wire:key="automatic-renew-runtime-342">
+                                1080 Tage – 126,00 €
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                            </option>
+                        <!--[if ENDBLOCK]><![endif]-->                    </select>
+                    <label class="bero-form-label" for="automaticRenewRuntimeSelect">
+                        Laufzeit der automatischen Verlängerung
+                    </label>
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+            <div class="rootserver-overview-row">
+                <div>
+                    <p class="m-0">
+                        Automatischer Zahlungseinzug
+                    </p>
+                </div>
+                <div class="d-flex justify-content-start">
+                    <!--[if BLOCK]><![endif]-->                        <div class="form-check form-switch">
+                            <input class="form-check-input rootserver-restart-switch" type="checkbox" role="switch"
+                                   id="automaticPaymentSwitchButton"  checked
+                                    wire:click="toggleAutomaticPayment()">
+                        </div>
+                        <p class="m-0">
+                            <!--[if BLOCK]><![endif]-->                                Aktiviert
+                            <!--[if ENDBLOCK]><![endif]-->                        </p>
+                    <!--[if ENDBLOCK]><![endif]-->                </div>
+            </div>
+
+            <!--[if BLOCK]><![endif]-->                <div class="form-floating pt-1 mb-2">
+                    <select class="form-select bero-form-bg-grey" id="automaticPaymentSelect"
+                            name="automaticPaymentSelect"
+                            aria-label="Zahlungsmethode für automatischen Einzug auswählen"
+                            wire:model.live="automaticPaymentId">
+                        <!--[if BLOCK]><![endif]-->                            <option value="392" wire:key="automatic-payment-392">
+                                PayPal
+                                (payer@example.test)
+                            </option>
+                        <!--[if ENDBLOCK]><![endif]-->                    </select>
+                    <label class="bero-form-label" for="automaticPaymentSelect">
+                        Automatischer Zahlungseinzug
+                    </label>
+                </div>
+
+                <div class="rootserver-overview-row">
+                    <div>
+                        <p class="m-0">
+                            Guthaben zuerst verwenden
+                        </p>
+                    </div>
+                    <div class="d-flex justify-content-start">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input rootserver-restart-switch" type="checkbox" role="switch"
+                                   id="automaticPaymentUseCreditSwitchButton"  wire:click="toggleAutomaticPaymentUseCredit()">
+                        </div>
+                        <p class="m-0 small text-muted">
+                            Vorhandenes Guthaben wird zuerst verwendet, nur der Differenzbetrag wird eingezogen.
+                        </p>
+                    </div>
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+            <!--[if BLOCK]><![endif]-->                <p class="small text-muted mt-1 mb-0">
+                    Die Beträge werden zum Zeitpunkt der Verlängerung mit deinem dann aktuellen Guthaben berechnet.
+                </p>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    <!--[if ENDBLOCK]><![endif]--></div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;serviceId&quot;: 2, &quot;selection&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}], &quot;packageId&quot;: null}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.service.product-upgrade&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.service.product-upgrade">
+    <!--[if BLOCK]><![endif]-->        <div class="text-center">
+            Diesen Server kannst du nicht ändern, da es eine feste Konfiguration ist.
+        </div>
+    <!--[if ENDBLOCK]><![endif]-->
+        </div>
+</body></html>

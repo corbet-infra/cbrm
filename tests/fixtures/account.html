@@ -1,0 +1,145 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<li class="nav-item px-3 px-xl-0">
+                                <div class="d-flex align-items-center ps-2 pt-1 pb-1 pe-2 color-bero-orange"
+                                     style="border: 2px solid #FE723A; border-radius: 10px; cursor: pointer;"
+                                     id="guthabenHeader">
+                                                                <span><b>Guthaben                                                                             0,00
+                                                                            €
+                                                                        </b></span>
+                                </div>
+
+                            </li>
+<div wire:snapshot="{&quot;data&quot;: {&quot;addSshKeyContentType&quot;: &quot;OVERVIEW&quot;, &quot;privateKeys&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}], &quot;selectedKeyId&quot;: 0, &quot;selectedKeyName&quot;: &quot;&quot;, &quot;newSshKeyName&quot;: &quot;&quot;, &quot;importSshKeyName&quot;: &quot;&quot;, &quot;importSshKeyPublicKey&quot;: &quot;&quot;}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.account.ssh-keys&quot;, &quot;path&quot;: &quot;customer/account&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.account.ssh-keys">
+    <div class="mb-3">
+        <small style="color: grey;">
+            <i class="fa-solid fa-circle-info"></i> Mit dieser Funktion kannst du deine SSH Keys ganz einfach verwalten. SSH Keys sind wie ein Zugangsschlüssel zu deinem Server und ersetzen das übliche Passwort. Bitte beachte: Der generierte Private Key darf nicht an dritte Personen weitergegeben werden. Du kannst deine SSH Keys nach dem Anlegen ganz einfach bei Neuinstallationen auswählen.:
+        </small>
+    </div>
+
+    <div class="d-flex justify-content-center flex-wrap">
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <div class="rootserver-backup-container rootserver-backup-item p-4" wire:key="existingSshKey301">
+                    <h3>
+                        <i class="fa-solid fa-key"></i> <span class="ps-2">laptop</span>
+                    </h3>
+                    <div>
+                        <div>
+                            <small class="m-1 mb-2 d-block rootserver-backup-p" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Fingerprint vom SSH Key">
+                                6c:0a:3f:b3:5d:e3:96:3d:bf:29:5c:4f:0d:e5:3f:b6
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end align-items-center">
+                        <div class="m-1">
+                            <button class="btn default-button-secondary" type="button" wire:click="selectSshKey(301)" data-bs-toggle="modal" data-bs-target="#deleteSshKeyModal">
+                                Löschen
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->        <!--[if ENDBLOCK]><![endif]-->
+        <div class="rootserver-backup-container rootserver-backup-item-new p-4 d-flex justify-content-center align-items-center" wire:click="showAddSshKeyOverviewContent" data-bs-toggle="modal" data-bs-target="#addSshKeyModal" wire:key="addNewSshKeyToAccount">
+            <div class="d-flex flex-column justify-content-center align-items-center">
+                <i class="fa-solid fa-plus fa-3x"></i>
+                <p class="m-0">
+                    SSH Key hinzufügen
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <div wire:ignore.self="" class="modal fade" id="addSshKeyModal" role="dialog" aria-labelledby="addSshKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content text-black bero-modal-content">
+                <div class="modal-header bg-bero-gradient bero-modal-header">
+                    <h1 class="modal-title fs-5" id="addSshKeyModalLabel">SSH Key hinzufügen</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-white">
+                    <div>
+                        <!--[if BLOCK]><![endif]-->                            <p class="text-white">
+                                Generiere neue SSH Keys oder importiere bereits bestehende SSH Keys
+                            </p>
+                            <div class="row">
+                                <div class="col-12 col-sm-6 mb-3">
+                                    <div class="grey-transparent-background mt-2 mb-2 w-auto h-auto bootorderitem" style="border-radius: 10px;">
+                                        <div class="d-flex flex-row align-items-center p-2 ps-3" style="border-radius: 10px; ">
+                                            <div>
+                                                Neuen SSH Key generieren <br>
+                                                <small style="color: grey;">
+                                                    Wir generieren deinen neuen SSH Key und stellen dir den Private Key zur Verfügung.
+                                                </small>
+
+                                                <div class="mt-3">
+                                                    <button class="btn default-button w-auto" wire:target="showAddSshKeyGenerateContent" wire:loading.attr="disabled" wire:loading.class="disabled" wire:click.prevent="showAddSshKeyGenerateContent">
+                                                        <span wire:target="showAddSshKeyGenerateContent" wire:loading=""><i class="fa fa-fw fa-spin fa-spinner-third"></i></span>
+                                                        Neuen SSH Key generieren
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-sm-6 mb-3">
+                                    <div class="grey-transparent-background mt-2 mb-2 w-auto h-auto bootorderitem" style="border-radius: 10px;">
+                                        <div class="d-flex flex-row align-items-center p-2 ps-3" style="border-radius: 10px; ">
+                                            <div>
+                                                Bestehenden SSH Key importieren<br>
+                                                <small style="color: grey;">
+                                                    Lade deinen bestehenden Public SSH Key im OpenSSH Format hoch.
+                                                </small>
+
+                                                <div class="mt-3">
+                                                    <button class="btn default-button-secondary w-auto" wire:target="showAddSshKeyImportContent" wire:loading.attr="disabled" wire:loading.class="disabled" wire:click.prevent="showAddSshKeyImportContent">
+                                                        <span wire:target="showAddSshKeyImportContent" wire:loading=""><i class="fa fa-fw fa-spin fa-spinner-third"></i></span>
+                                                        Importieren
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <!--[if ENDBLOCK]><![endif]-->                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div wire:ignore.self="" class="modal fade" id="deleteSshKeyModal" role="dialog" aria-labelledby="deleteSshKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-black bero-modal-content">
+                <div class="modal-header bg-bero-gradient bero-modal-header">
+                    <h1 class="modal-title fs-5" id="deleteSshKeyModalLabel">SSH Key löschen</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <p class="text-white">
+                            Willst du den SSH Key 
+                            <b></b> wirklich löschen?
+                        </p>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="button" class="btn default-button-secondary close-btn" data-bs-dismiss="modal" aria-label="Close">
+                                    Abbrechen
+                                </button>
+                            </div>
+                            <div>
+                                <button type="button" wire:click.prevent="deleteSshKey" class="btn default-button close-modal" data-bs-dismiss="modal" aria-label="Close">
+                                    Löschen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body></html>
