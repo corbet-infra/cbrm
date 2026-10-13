@@ -1,6 +1,6 @@
 ---
 name: bero
-description: Operate BERO HOST (bero-host.de) KVM rootservers — status, the panel's action log, VNC console (screenshot, typing), power, root password, reinstall with an SSH key baked in, own ISOs, CD drives, boot order, rescue system. Use when the user asks to check, restart, reinstall or boot a BERO HOST server, or to see its console. Uses the cbrm tool (MCP server `cbrm-mcp` or CLI `cbrm`). Use when the user asks to check, restart or operate a BERO HOST server, or to see its console. Uses the cbrm tool (MCP server `cbrm-mcp` or CLI `cbrm`).
+description: Operate BERO HOST (bero-host.de) KVM rootservers — status, the panel's action log, VNC console (screenshot, typing), power, root password, reinstall with an SSH key baked in, own ISOs, CD drives, boot order, rescue system, IP addresses and reverse DNS, backups, scheduled tasks, host and product name, statistics, the account's SSH keys, renewal and credit information. Use when the user asks to check, restart, reinstall or boot a BERO HOST server, to see its console, or to manage its backups, rDNS or SSH keys. Uses the cbrm tool (MCP server `cbrm-mcp` or CLI `cbrm`). Use when the user asks to check, restart or operate a BERO HOST server, or to see its console. Uses the cbrm tool (MCP server `cbrm-mcp` or CLI `cbrm`).
 ---
 
 # BERO HOST with cbrm
@@ -33,6 +33,11 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 | Fresh OS with your key | `bero_templates`, `bero_ssh_keys` → `bero_reinstall(template, ssh_keys=[name], confirm=vm, confirm_destroy=vm)` → SSH |
 | Boot your own ISO | `bero_iso_add(url, title, confirm=vm)` (the panel downloads in the background; wait) → `bero_isos(search=title)` → `bero_iso_mount(drive="ide2", iso=id, confirm=vm)` (must be `verified: true`) → keep one CD drive (`bero_drive_delete`) → **then** `bero_boot_order_set(order=["ide2","scsi0","net0"], confirm=vm)` → `bero_power(stop)`, `bero_power(start)` → right away `bero_console_input(keys=["enter"], repeat=3, interval=0.5, confirm=vm)` to pick the ISO menu's default → `bero_console` |
 | Act at the console | `bero_console` → `bero_console_input(text=..., keys=["enter"], confirm=vm)` → `bero_console` |
+| Backup before a risky change | `bero_backups` (free slot?) → `bero_backup_create(title, confirm=vm)` → later `bero_backups` shows it; restoring (`bero_backup_restore`) and deleting (`bero_backup_delete`) overwrite or destroy: only when the user asked, with `confirm` and `confirm_destroy` |
+| Reverse DNS | `bero_addresses` → `bero_rdns_set(address, name, confirm=vm)` (`verified: true`) |
+| Resource use | `bero_stats` (now) or `bero_stats_history(timeframe, metric)` |
+| Stored SSH keys | `bero_account_ssh_keys`; `bero_account_ssh_key_import(name, public_key, confirm=vm)` takes **public** keys only; account-wide, `vm` names the account context |
+| Runtime, prices, credit | `bero_renewal`, `bero_account_credit` (read only; paying is not part of cbrm) |
 | Is cbrm still in sync with the panel? | `bero_doctor(vm)` |
 
 ## Setup
