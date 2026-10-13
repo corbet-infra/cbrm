@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-10-13
 
 - New reads: `addresses`, `backups`, `automatic-backup-status`, `tasks`, `stats`, `stats-history`, `renewal`
   (runtime left, auto-renewal with the prices the panel quotes, upgrade possible or not, credit),
