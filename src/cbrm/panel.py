@@ -165,7 +165,11 @@ class Panel:
         q = httpx.URL(src).params
         if not (q.get("host") and q.get("port") and q.get("password")):
             raise PanelError(f"no console session offered for {vm}")
-        return q["host"], int(q["port"]), q["password"]
+        try:
+            port = int(q["port"])
+        except ValueError:
+            raise ContractError(f"console page of {vm}: the noVNC frame offers a port that is not a number") from None
+        return q["host"], port, q["password"]
 
     def _form_token(self, html: str) -> str:
         return HTMLParser(html).css_first("meta[name=csrf-token]").attributes["content"]

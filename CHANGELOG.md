@@ -28,7 +28,7 @@ Fixes from a second independent review (the 0.4.0 features):
 - Panel answers: results (and so the audit log) keep only the panel's `state` and `message`. `renewal`
   returns the payment as amount and method name only (never an account identifier) and describes the
   upgrade section in its own words instead of returning component text. An unreadable remaining runtime
-  is a contract error; the command line prints one line, not a traceback, for content it did not expect
+  or console port is a contract error; the command line prints one line, not a traceback, for content it did not expect
   (`CBRM_DEBUG=1` re-raises).
 - `cbrm doctor` shares one context across its checks: the product page, the account page and every lazy
   component are loaded once.
