@@ -14,5 +14,10 @@
         };
         default = cbrm;
       });
+      devShells = forAll (pkgs: {
+        default = pkgs.mkShell {
+          packages = [ (pkgs.python3.withPackages (ps: with ps; [ httpx selectolax websockets vncdotool pillow mcp fastapi uvicorn pytest ])) pkgs.ruff ];
+        };
+      });
     };
 }
