@@ -52,8 +52,9 @@ class Panel:
 
     # -- session -----------------------------------------------------------------------------
     def _save(self) -> None:
-        self._cookies.write_text(json.dumps({c.name: c.value for c in self.http.cookies.jar}))
-        self._cookies.chmod(0o600)
+        fd = os.open(self._cookies, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)  # never readable by others
+        with os.fdopen(fd, "w") as f:
+            json.dump({c.name: c.value for c in self.http.cookies.jar}, f)
 
     def _login(self) -> None:
         form = HTMLParser(self.http.get("/login").text).css_first("form[action$='/login'] input[name=_token]")
