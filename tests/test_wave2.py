@@ -392,9 +392,7 @@ IMPORT_FORM = ('<div><input wire:model.live="importSshKeyName"><textarea wire:mo
 def test_ssh_key_import_shows_the_form_then_sends_name_and_key(svc):
     key = make_key("me@host")
     svc.panel.http.wire.html["showAddSshKeyImportContent"] = IMPORT_FORM
-    svc.panel.http.wire.on["importSshKey"] = lambda data, params: svc.panel.pages.__setitem__(
-        A, ACCOUNT.replace("existingSshKey301", "existingSshKey301x").replace(
-            'wire:key="addNewSshKeyToAccount"', 'wire:key="addNewSshKeyToAccount"')) or None
+    svc.panel.http.wire.on["importSshKey"] = lambda data, params: None
     r = svc.run("account-ssh-key-import", "1", {"name": "ci", "public_key": key}, confirm="1")
     assert svc.panel.http.wire.log == [("ssh-keys", {}, [("showAddSshKeyImportContent", [])]),
                                        ("ssh-keys", {"importSshKeyName": "ci", "importSshKeyPublicKey": key}, [("importSshKey", [])])]
