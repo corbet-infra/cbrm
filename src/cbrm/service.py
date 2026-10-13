@@ -12,6 +12,9 @@ from .panel import Panel
 
 
 class Service:
+    """Use this, not `Panel`, from code: Panel is the raw transport and applies none of the rules.
+    An empty allow-list (CBRM_VMS unset) means every VM of the account."""
+
     def __init__(self, panel: Panel, allow: list[str] | None = None, audit: Path | None = None):
         self.panel = panel
         self.allow = allow if allow is not None else os.environ.get("CBRM_VMS", "").split()
@@ -72,35 +75,45 @@ class Service:
     def run(self, name: str, vm: str, args: dict | None = None, *, confirm: str | None = None,
             confirm_destroy: str | None = None, confirm_cost: str | None = None, dry_run: bool = False):
         """Run a feature. Returns its result (bytes for PNG features). Changing features return a dict with
-        `result` and `verified` (True, False, or None when the feature has no verification)."""
+        `result` and `verified` (True, False, or None when there is no verification or it failed: then
+        `verify_error` says why). A dry run makes only reading requests and returns {"dry_run": True, "would": ...}."""
         f = self._feature(name)
         a = self._args(f, args or {})
-        if not dry_run:
-            self._gate(f, vm, confirm, confirm_destroy, confirm_cost)
-        elif self.allow and vm not in self.allow:
+        if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")
-        ctx = Ctx(self.panel, dry_run=dry_run)
+        if dry_run and f.risk != "read":
+            if f.risk == "secret":  # never reveal anything in a dry run
+                return {"dry_run": True, "would": f"reveal {f.name} of VM {vm} (needs confirm={vm})"}
+            result = f.run(Ctx(self.panel, dry_run=True), vm, **a)
+            if not (isinstance(result, dict) and result.get("dry_run")):
+                raise ServiceError(f"{f.name} has no dry run")  # safety net: a dry run never returns real results
+            return result
+        self._gate(f, vm, confirm, confirm_destroy, confirm_cost)
+        ctx = Ctx(self.panel)
         if f.risk == "read":
             return f.run(ctx, vm, **a)
-        shown = {k: ("***" if next(p for p in f.params if p.name == k).secret else v) for k, v in a.items()}
-        if not dry_run:
-            self._audit(f"{f.name} {vm} {shown} requested")
+        secret = {p.name for p in f.params if p.secret}
+        shown = {k: ("<given>" if k in secret and v else v) for k, v in a.items()}
+        self._audit(f"{f.name} {vm} {shown} requested")
         result = f.run(ctx, vm, **a)
-        if dry_run:
-            return result
         if f.risk == "secret":
             self._audit(f"{f.name} {vm} revealed")
             return result
-        logged = {k: v for k, v in result.items() if k != "root_password"} if isinstance(result, dict) else result
+        logged = sorted(result) if f.secret_result and isinstance(result, dict) else result
         self._audit(f"{f.name} {vm} -> {logged}")
-        verified = f.verify(ctx, vm, result, **a) if f.verify else None
+        out = {"result": result, "verified": None}
         if f.verify:
-            self._audit(f"{f.name} {vm} verified={verified}")
-        return {"result": result, "verified": verified}
+            try:
+                out["verified"] = bool(f.verify(ctx, vm, result, **a))
+            except Exception as e:  # the change was sent: never report a verification problem as "not sent"
+                out["verify_error"] = f"{type(e).__name__}: {e}"
+            self._audit(f"{f.name} {vm} verified={out['verified']}" + (f" ({out['verify_error']})" if "verify_error" in out else ""))
+        return out
 
     def check(self, vm: str) -> dict[str, str]:
         """`cbrm doctor`: for every feature, read-only proof that the panel still offers what it needs."""
-        from .errors import PanelError
+        if self.allow and vm not in self.allow:
+            raise ServiceError(f"VM {vm} is not in the allow-list")
         out = {}
         for f in REGISTRY.values():
             ctx = Ctx(self.panel)
@@ -113,6 +126,6 @@ class Service:
                     out[f.name] = "untested"
                     continue
                 out[f.name] = "ok"
-            except (PanelError, ServiceError, KeyError, StopIteration, AttributeError) as e:
-                out[f.name] = f"BROKEN: {e}"
+            except Exception as e:  # doctor reports, it never crashes: that is when the panel changed
+                out[f.name] = f"BROKEN: {type(e).__name__}: {e}"
         return out

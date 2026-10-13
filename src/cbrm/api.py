@@ -20,7 +20,7 @@ _bearer = HTTPBearer()
 
 def _auth(cred: HTTPAuthorizationCredentials = Depends(_bearer)) -> None:
     token = os.environ.get("CBRM_API_TOKEN", "")
-    if not token or not secrets.compare_digest(cred.credentials, token):
+    if not token or not secrets.compare_digest(cred.credentials.encode(), token.encode()):
         raise HTTPException(401, "bad token")
 
 
@@ -33,8 +33,14 @@ class RunRequest(BaseModel):
 
 
 def create_app(service: Service) -> FastAPI:
-    app = FastAPI(title="cbrm", version=__version__, dependencies=[Depends(_auth)],
-                  description="BERO HOST management. GET /features lists every operation with its risk class.")
+    # FastAPI's own docs routes would bypass the app-level token: switch them off and serve the schema
+    # through an authenticated route instead.
+    app = FastAPI(title="cbrm", version=__version__, dependencies=[Depends(_auth)], docs_url=None, redoc_url=None,
+                  openapi_url=None, description="BERO HOST management. GET /features lists every operation with its risk class.")
+
+    @app.get("/openapi.json", include_in_schema=False)
+    def openapi() -> dict:
+        return app.openapi()
 
     @app.exception_handler(ServiceError)
     async def refused(_: Request, e: ServiceError):
@@ -42,7 +48,8 @@ def create_app(service: Service) -> FastAPI:
 
     @app.exception_handler(ContractError)
     async def contract(_: Request, e: ContractError):
-        return JSONResponse({"detail": str(e), "kind": "panel-changed"}, status_code=409)
+        return JSONResponse({"detail": f"the panel changed, so the change was not made: {e}", "kind": "panel-changed"},
+                            status_code=409)
 
     @app.exception_handler(PanelError)
     async def panel(_: Request, e: PanelError):

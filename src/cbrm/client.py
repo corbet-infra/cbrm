@@ -14,10 +14,18 @@ class Client:
         self.http = httpx.Client(base_url=url.rstrip("/"), headers={"Authorization": f"Bearer {token}"}, timeout=300)
 
     def _do(self, method: str, path: str, **kw):
-        r = self.http.request(method, path, **kw)
+        try:
+            r = self.http.request(method, path, **kw)
+        except httpx.TimeoutException as e:
+            raise PanelError(f"{method} {path}: no answer from the cbrm API in time; the request may still be "
+                             "running there: check with a read feature before repeating it") from e
+        except httpx.HTTPError as e:
+            raise PanelError(f"{method} {path}: {type(e).__name__}: {e}") from e
         if r.status_code in (403, 409, 502):
             detail = r.json().get("detail", r.text)
             raise {403: ServiceError, 409: ContractError, 502: PanelError}[r.status_code](detail)
+        if r.status_code == 401:
+            raise ServiceError("the cbrm API refused the token (CBRM_API_TOKEN)")
         r.raise_for_status()
         return r
 

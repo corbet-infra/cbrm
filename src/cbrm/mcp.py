@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import inspect
 
+import anyio
+
 try:  # mcp >= 2 renamed FastMCP to MCPServer; the API used here is the same
     from mcp.server.mcpserver import Image, MCPServer as _Server
     from mcp.server.mcpserver.exceptions import ToolError
@@ -20,7 +22,7 @@ mcp = _Server("cbrm", instructions=(
     "Operate BERO HOST (bero-host.de) KVM rootservers through the customer panel and the VNC console. "
     "Read first. Every tool states its risk: change tools need confirm=<vm>, destroy tools also "
     "confirm_destroy=<vm>, cost tools confirm_cost=<amount>. dry_run=true shows what would be sent. "
-    "A 'panel changed' error means BERO altered the panel: nothing was sent; report it, do not work around it. "
+    "A 'panel changed' error means BERO altered the panel and the change was not made; report it, do not work around it. "
     "`system` in bero_status is the last template BERO installed, not necessarily what runs."))
 _b = None
 
@@ -48,13 +50,14 @@ def _tool(f: Feature):
     if f.risk != "read":
         params.append(P("dry_run", P.KEYWORD_ONLY, annotation=bool, default=False))
 
-    def tool(**kw):
+    async def tool(**kw):
         vm = kw.pop("vm")
         opts = {k: kw.pop(k) for k in ("confirm", "confirm_destroy", "confirm_cost", "dry_run") if k in kw}
-        try:
-            r = b().run(f.name, vm, {k: v for k, v in kw.items() if v is not None}, **opts)
-        except ContractError as e:  # the text reaches the client: say clearly that nothing was sent
-            raise ToolError(f"panel changed, nothing was sent: {e}") from e
+        args = {k: v for k, v in kw.items() if v is not None}
+        try:  # in a worker thread: panel and console calls block, the server must keep answering
+            r = await anyio.to_thread.run_sync(lambda: b().run(f.name, vm, args, **opts))
+        except ContractError as e:  # the text reaches the client: say clearly that the change was not made
+            raise ToolError(f"the panel changed, so the change was not made: {e}") from e
         except (ServiceError, PanelError) as e:
             raise ToolError(f"refused: {e}" if isinstance(e, ServiceError) else f"panel error: {e}") from e
         return Image(data=r, format="png") if isinstance(r, bytes) else r
@@ -71,15 +74,15 @@ for _f in REGISTRY.values():
 
 
 @mcp.tool()
-def bero_vms() -> list[dict]:
+async def bero_vms() -> list[dict]:
     """[read] All KVM rootservers of the account: state, addresses, last installed template."""
-    return b().vms()
+    return await anyio.to_thread.run_sync(lambda: b().vms())
 
 
 @mcp.tool()
-def bero_doctor(vm: str) -> dict:
+async def bero_doctor(vm: str) -> dict:
     """[read] Check that the panel still offers every feature (ok / BROKEN: reason / untested)."""
-    return b().check(vm)
+    return await anyio.to_thread.run_sync(lambda: b().check(vm))
 
 
 def main() -> None:

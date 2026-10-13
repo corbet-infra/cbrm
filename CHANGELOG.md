@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.2 — 2026-10-13
+
+Fixes from an independent review before the public announcement:
+
+- A dry run of `root-password` revealed the password without confirmation; secret features now never run
+  in a dry run, and a dry run returns only a description.
+- `console-input` text and other secret arguments never reach the audit log; secret results are logged
+  as their keys only.
+- `iso-add` in a dry run no longer opens the form or sends the URL; its contract (form fields, method) is
+  checked before anything is submitted.
+- An error while verifying a change that was sent is reported as `verified: null` + `verify_error`, not as
+  "nothing was sent"; the wording is now "the panel changed, so the change was not made".
+- `doctor` respects the allow-list and reports instead of crashing.
+- HTTP API: the framework's docs routes (which bypassed the token) are off; `/openapi.json` needs the
+  token; a non-ASCII token is a 401, not a 500.
+- Exact endpoint checks (`/stop` no longer matches `/stop-hard`); reinstall and set-root-password check the
+  form fields they submit; drive and boot-order reads fail closed when the refresh is missing.
+- Every HTTP error maps to `PanelError` (419 on an expired Livewire session included); the session's login
+  and product scan are locked for the threaded API; the cookie file is written atomically and a damaged
+  one is ignored.
+- MCP tools run in a worker thread; the client reports a timeout as "may still be running".
+- `console-input`: repeat x interval at most 120 s; the console cleans up when opening fails.
+
 ## 0.3.1 — 2026-10-13
 
 - Fix: every command that used the console hung when the process exited (vncdotool's reactor thread

@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,18 +44,23 @@ class Panel:
         self.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._cookies = self.state_dir / "cookies.json"
         jar = httpx.Cookies()
-        if self._cookies.exists():
+        try:
             for name, value in json.loads(self._cookies.read_text()).items():
                 jar.set(name, value, domain="bero-host.de")
+        except (OSError, ValueError, AttributeError):
+            pass  # no or unreadable session file: log in afresh
+        self._lock = threading.RLock()  # `cbrm serve` handles requests in threads: one login, one product scan
         self.http = httpx.Client(base_url=BASE, cookies=jar, timeout=60,
                                  headers={"User-Agent": "cbrm (+https://git.corbet.ch/corbet-infra/cbrm)"})
         self._products: dict[str, str] | None = None
 
     # -- session -----------------------------------------------------------------------------
     def _save(self) -> None:
-        fd = os.open(self._cookies, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)  # never readable by others
+        """Atomically: a temp file (0600 from the start) renamed over the old one."""
+        fd, tmp = tempfile.mkstemp(dir=self.state_dir, prefix=".cookies-")
         with os.fdopen(fd, "w") as f:
             json.dump({c.name: c.value for c in self.http.cookies.jar}, f)
+        os.replace(tmp, self._cookies)
 
     def _login(self) -> None:
         self.http.cookies.clear()  # a stale session cookie would shadow the new one
@@ -66,27 +73,35 @@ class Panel:
             raise PanelError("login failed")
         self._save()
 
+    def _get(self, path: str, **kw) -> httpx.Response:
+        try:
+            r = self.http.get(path, **kw)
+            if r.status_code == 302 and "/login" in r.headers.get("location", ""):
+                with self._lock:
+                    self._login()
+                r = self.http.get(path, **kw)
+            r.raise_for_status()
+            return r
+        except httpx.HTTPError as e:
+            raise PanelError(f"GET {path}: {type(e).__name__}: {e}") from e
+
     def page(self, path: str) -> str:
         """GET a panel page, logging in again when the session has expired."""
-        r = self.http.get(path)
-        if r.status_code == 302 and "/login" in r.headers.get("location", ""):
-            self._login()
-            r = self.http.get(path)
-        r.raise_for_status()
-        return r.text
+        return self._get(path).text
 
     # -- reading -----------------------------------------------------------------------------
     def products(self) -> dict[str, str]:
         """VM id -> product id, for every KVM rootserver in the account."""
-        if self._products is None:
-            ids = sorted(set(re.findall(r"/customer/products/(\d+)", self.page("/customer"))))
-            self._products = {}
-            for pid in ids:
-                title = HTMLParser(self.page(f"/customer/products/{pid}")).css_first("title").text()
-                m = re.search(r"#(\d+) \(KVM Rootserver #%s\)" % pid, title)
-                if m:
-                    self._products[m.group(1)] = pid
-        return self._products
+        with self._lock:
+            if self._products is None:
+                found = {}
+                for pid in sorted(set(re.findall(r"/customer/products/(\d+)", self.page("/customer")))):
+                    title = HTMLParser(self.page(f"/customer/products/{pid}")).css_first("title")
+                    m = re.search(r"#(\d+) \(KVM Rootserver #%s\)" % pid, title.text() if title else "")
+                    if m:
+                        found[m.group(1)] = pid
+                self._products = found  # published only when complete
+            return self._products
 
     def _product_page(self, vm: str) -> str:
         pid = self.products().get(vm)
@@ -97,7 +112,9 @@ class Panel:
     def status(self, vm: str) -> dict[str, str]:
         """Overview fields. `system` is the last template BERO installed, not what is running now."""
         lines = _lines(self._product_page(vm))
-        i = next(k for k, l in enumerate(lines) if l.startswith("KVM Rootserver #"))
+        i = next((k for k, l in enumerate(lines) if l.startswith("KVM Rootserver #")), None)
+        if i is None or i + 1 >= len(lines):
+            raise ContractError(f"product page of {vm}: no overview")
         out = {"vm": vm, "state": lines[i + 1]}
         names = {"Hostname": "hostname", "Installiertes System": "system", "Haupt IP-Adressen": "ipv4"}
         for k in range(i, min(len(lines) - 2, i + 80)):
@@ -174,10 +191,13 @@ class Panel:
     # -- changing ----------------------------------------------------------------------------
     def _post_json(self, vm: str, action: str, data: dict) -> dict:
         data = {"_token": self._form_token(self._product_page(vm)), **data}
-        r = self.http.post(f"/customer/rootserver/{vm}/{action}", data=data,
-                           headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
-        r.raise_for_status()
-        return r.json()
+        try:
+            r = self.http.post(f"/customer/rootserver/{vm}/{action}", data=data,
+                               headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
+            r.raise_for_status()
+            return r.json()
+        except (httpx.HTTPError, ValueError) as e:
+            raise PanelError(f"POST {action}: {type(e).__name__}: {e}") from e
 
     def set_root_password(self, vm: str, password: str) -> dict:
         return self._post_json(vm, "setrootpassword", {"password": password, "password_confirmation": password})
@@ -188,16 +208,14 @@ class Panel:
 
     def get_json(self, path: str, params: dict | None = None) -> dict:
         """A panel endpoint the page's JavaScript calls with $.getJSON."""
-        r = self.http.get(path, params=params,
-                          headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
-        r.raise_for_status()
-        return r.json()
+        r = self._get(path, params=params, headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
+        try:
+            return r.json()
+        except ValueError as e:
+            raise PanelError(f"GET {path}: not JSON") from e
 
     def power(self, vm: str, action: str) -> dict:
         if action not in POWER_ACTIONS:
             raise PanelError(f"power action must be one of {POWER_ACTIONS}")
         self._product_page(vm)  # also proves the VM belongs to this account
-        r = self.http.get(f"/customer/rootserver/{vm}/{action}",
-                          headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"})
-        r.raise_for_status()
-        return r.json()
+        return self.get_json(f"/customer/rootserver/{vm}/{action}")

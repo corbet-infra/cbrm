@@ -10,9 +10,35 @@ from cbrm.service import Service
 FIXTURE = (Path(__file__).parent / "fixtures" / "product.html").read_text()
 
 
+class FakeLivewire:
+    """Answers every Livewire call with the posted snapshot and the whole fixture as the rendering, and
+    records the methods called, so tests see exactly what would have been sent."""
+
+    def __init__(self, panel):
+        self.panel = panel
+
+    def post(self, uri, headers=None, json=None):
+        comp = json["components"][0]
+        self.panel.calls += [("livewire", c["method"]) for c in comp["calls"]]
+        panel = self.panel
+
+        class R:
+            status_code = 200
+            def raise_for_status(self): pass
+            def json(self): return {"components": [{"snapshot": comp["snapshot"], "effects": {"html": panel.html}}]}
+        return R()
+
+
+READ_ONLY_CALLS = {"__lazyLoad", "updateDrivesContent", "updateBootOrderContent", "nextPage"}
+
+
 class FakePanel:
     def __init__(self, tmp: Path, html: str = FIXTURE):
         self.state_dir, self.calls, self.html = tmp, [], html
+        self.http = FakeLivewire(self)
+
+    def changes(self):
+        return [c for c in self.calls if not (c[0] == "livewire" and c[1] in READ_ONLY_CALLS)]
 
     def products(self): return {"1": "2", "3": "4"}
     def page(self, path): return self.html
@@ -40,7 +66,7 @@ def test_allow_list(svc):
 def test_every_non_read_feature_needs_confirm(svc, name):
     with pytest.raises(ServiceError):
         svc.run(name, "1", {}, confirm="3")
-    assert svc.panel.calls == []
+    assert svc.panel.changes() == []
 
 
 def test_destroy_needs_both_confirmations(svc):
@@ -48,14 +74,36 @@ def test_destroy_needs_both_confirmations(svc):
     for c, d in (("1", None), ("1", "3"), (None, "1")):
         with pytest.raises(ServiceError):
             svc.run("reinstall", "1", args, confirm=c, confirm_destroy=d)
-    assert svc.panel.calls == []
+    assert svc.panel.changes() == []
     svc.run("reinstall", "1", args, confirm="1", confirm_destroy="1")
-    assert svc.panel.calls == [("reinstall", "1", "53", ("1839",))]
+    assert svc.panel.changes() == [("reinstall", "1", "53", ("1839",))]
 
 
 def test_dry_run_sends_nothing(svc):
     r = svc.run("reinstall", "1", {"template": "Arch Linux"}, dry_run=True)
-    assert r["dry_run"] and "reinstall" in r["would"] and svc.panel.calls == []
+    assert r["dry_run"] and "reinstall" in r["would"] and svc.panel.changes() == []
+
+
+def test_a_secret_is_never_revealed_by_a_dry_run(svc):
+    r = svc.run("root-password", "1", dry_run=True)
+    assert r["dry_run"] and "secret-value" not in str(r)
+    assert not svc.audit_path.exists() or "secret-value" not in svc.audit_path.read_text()
+
+
+SAMPLE_ARGS = {"power": {"action": "restart"}, "console-input": {"keys": ["enter"]}, "iso-mount": {"drive": "ide0", "iso": "7600"},
+               "iso-unmount": {"drive": "ide2"}, "iso-add": {"url": "https://example.org/x.iso", "title": "x"},
+               "boot-order-set": {"order": ["ide0", "scsi0", "net0"]}, "rescue-enable": {"image": "1"},
+               "reinstall": {"template": "Arch Linux"}, "drive-delete": {"drive": "ide0"}}
+
+
+@pytest.mark.parametrize("name", [n for n, f in REGISTRY.items() if f.risk != "read"])
+def test_dry_runs_change_nothing(svc, name):
+    try:
+        r = svc.run(name, "1", SAMPLE_ARGS.get(name, {}), dry_run=True)
+    except (ServiceError, ContractError):
+        r = {"dry_run": True}  # refused before anything: also fine
+    assert r.get("dry_run") is True
+    assert svc.panel.changes() == [], svc.panel.changes()
 
 
 def test_unknown_names_and_arguments_are_refused(svc):
@@ -65,7 +113,7 @@ def test_unknown_names_and_arguments_are_refused(svc):
         svc.run("status", "1", {"bogus": 1})
     with pytest.raises(ServiceError):
         svc.run("power", "1", {"action": "reinstall"}, confirm="1")
-    assert svc.panel.calls == []
+    assert svc.panel.changes() == []
 
 
 def test_secrets_never_reach_the_audit_log(svc):
@@ -73,6 +121,47 @@ def test_secrets_never_reach_the_audit_log(svc):
         svc.run("root-password", "1")
     assert svc.run("root-password", "1", confirm="1")["root_password"] == "secret-value"
     assert "secret-value" not in svc.audit_path.read_text()
+
+
+def test_typed_text_never_reaches_the_audit_log(svc, monkeypatch):
+    import cbrm.console
+    typed = []
+
+    class FakeConsole:
+        def __init__(self, *a): pass
+        def __enter__(self): return self
+        def __exit__(self, *e): pass
+        def type(self, text): typed.append(text)
+        def keys(self, *k, **kw): pass
+    monkeypatch.setattr(cbrm.console, "Console", FakeConsole)
+    svc.panel.console_session = lambda vm: ("h", 1, "t")
+    svc.run("console-input", "1", {"text": "hunter2-luks", "keys": ["enter"]}, confirm="1")
+    assert typed == ["hunter2-luks"]
+    log = svc.audit_path.read_text()
+    assert "hunter2-luks" not in log and "<given>" in log
+
+
+def test_verification_errors_are_not_reported_as_not_sent(svc, monkeypatch):
+    from dataclasses import replace
+    from cbrm.features import registry
+    def boom(*a, **k): raise ContractError("rendering vanished")
+    monkeypatch.setitem(registry.REGISTRY, "power", replace(registry.REGISTRY["power"], verify=boom))
+    r = svc.run("power", "1", {"action": "restart"}, confirm="1")
+    assert r["verified"] is None and "rendering vanished" in r["verify_error"]
+    assert ("power", "1", "restart") in svc.panel.calls
+
+
+def test_doctor_respects_the_allow_list(svc):
+    with pytest.raises(ServiceError):
+        svc.check("3")
+
+
+def test_endpoint_checks_are_exact(svc):
+    from cbrm.features.registry import Ctx
+    page = Ctx(svc.panel).product_page("1")
+    page.require_endpoint("/customer/rootserver/1/stop")
+    with pytest.raises(ContractError):
+        page.require_endpoint("/customer/rootserver/1/sto")
 
 
 def test_parsers_against_the_panel_snapshot(svc):
@@ -94,7 +183,7 @@ def test_a_changed_panel_stops_before_sending(tmp_path):
         svc.run("boot-order-set", "1", {"order": ["ide0", "scsi0", "net0"]}, confirm="1")
     with pytest.raises(ContractError):
         svc.run("iso-unmount", "1", {"drive": "ide2"}, confirm="1")
-    assert svc.panel.calls == []
+    assert svc.panel.changes() == []
     report = svc.check("1")
     assert report["boot-order-set"].startswith("BROKEN") and report["iso-unmount"].startswith("BROKEN")
 
@@ -106,5 +195,6 @@ def test_mount_counts_only_the_exact_file(tmp_path, monkeypatch):
     monkeypatch.setattr(media.time, "sleep", lambda s: None)
     ctx = Ctx(FakePanel(tmp_path))
     assert media._verify_mount(ctx, "1", {"mounted": {"file": "nixos-installer.iso"}}, "ide2", "x")
+    assert not media._verify_mount(ctx, "1", {"mounted": {"file": ""}}, "ide2", "x")
     assert not media._verify_mount(ctx, "1", {"mounted": {"file": "other.iso"}}, "ide2", "x")
     assert not media._verify_mount(ctx, "1", {"mounted": {"file": "nixos-installer.iso"}}, "ide0", "x")
