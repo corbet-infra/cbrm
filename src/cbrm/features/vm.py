@@ -85,10 +85,17 @@ def _power(ctx, vm, action):
     return ctx.send(f"GET /customer/rootserver/{vm}/{action}", lambda: ctx.panel.power(vm, action))
 
 
+def _check_set_root_password(ctx, vm):
+    page = ctx.product_page(vm)
+    page.require_endpoint(f"/customer/rootserver/{vm}/setrootpassword")
+    page.require_text("password_confirmation")
+
+
 @feature("set-root-password", "change", "Set the root password (generated if omitted); returns it",
          (Param("password", "the new password", required=False, secret=True),), secret_result=True,
-         check=lambda ctx, vm: ctx.product_page(vm).require_endpoint(f"/customer/rootserver/{vm}/setrootpassword"))
+         check=_check_set_root_password)
 def _set_root_password(ctx, vm, password=None):
+    _check_set_root_password(ctx, vm)
     password = password or "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
     r = ctx.send(f"POST /customer/rootserver/{vm}/setrootpassword", lambda: ctx.panel.set_root_password(vm, password))
     return r if r.get("dry_run") else {**r, "root_password": password}
@@ -96,15 +103,15 @@ def _set_root_password(ctx, vm, password=None):
 
 @feature("console-input", "change", "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); "
          "repeat the keys to catch a boot menu",
-         (Param("text", "text to type", required=False, default=""),
+         (Param("text", "text to type (kept out of the audit log)", required=False, default="", secret=True),
           Param("keys", "keys to press after the text", required=False, multiple=True, default=()),
           Param("repeat", "press the keys this many times (max 120)", int, False, default=1),
           Param("interval", "seconds between repeats", float, False, default=1.0)),
          check=_check_console)
 def _console_input(ctx, vm, text="", keys=(), repeat=1, interval=1.0):
     repeat, interval = int(repeat), float(interval)
-    if not 1 <= repeat <= 120 or not 0.1 <= interval <= 30:
-        raise ServiceError("repeat must be 1..120 and interval 0.1..30 seconds")
+    if not 1 <= repeat <= 120 or not 0.1 <= interval <= 30 or repeat * interval > 120:
+        raise ServiceError("repeat must be 1..120, interval 0.1..30 s, and repeat x interval at most 120 s")
 
     def go():
         from ..console import Console
@@ -122,8 +129,9 @@ def _console_input(ctx, vm, text="", keys=(), repeat=1, interval=1.0):
 def _check_reinstall(ctx, vm):
     page = ctx.product_page(vm)
     page.require_endpoint(f"/customer/rootserver/{vm}/reinstall")
-    if HTMLParser(page.html).css_first("select#rootserverTemplate") is None:
+    if HTMLParser(page.html).css_first('select#rootserverTemplate[name="template"]') is None:
         raise ContractError("reinstall form: template selection missing")
+    page.require_text('name="ssh_keys[]"')  # the field the panel's script builds for the chosen keys
 
 
 @feature("reinstall", "destroy", "Reinstall from a template with stored SSH keys baked in. ERASES THE DISK",

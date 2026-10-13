@@ -57,14 +57,17 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | destroy | `--confirm <vm>` and `--confirm-destroy <vm>` |
 | cost | `--confirm <vm>` and `--confirm-cost <amount>` (none implemented yet) |
 
-Every changing command takes `--dry-run`: cbrm reads the panel, checks everything, and shows the exact
-request it would send — without sending it.
+Every changing command takes `--dry-run`: cbrm reads the panel (it may refresh or page through lists, which
+changes nothing), checks everything, and shows the exact request it would send — without sending it or any
+other request that changes or submits something. A dry run of a `secret` feature reveals nothing.
 
 ### When BERO changes the panel
 
 cbrm checks before every change that the panel still offers exactly what the feature relies on (the
-Livewire component and method, the form, the endpoint in the page's own script). If anything differs it
-stops with "the panel changed, nothing was sent" (HTTP 409, an MCP tool error) instead of guessing.
+Livewire component and method, the form and its field names, the exact endpoint in the page's own script).
+If anything differs it stops with "the panel changed, so the change was not made" (HTTP 409, an MCP tool
+error) instead of guessing. If a change was sent but cannot be confirmed afterwards, the answer says so
+(`verified: null` and `verify_error`) instead of claiming nothing happened.
 `cbrm doctor <vm>` runs these checks for every feature, read-only — run it on a schedule to learn about
 a panel change before you need the feature.
 
@@ -84,7 +87,7 @@ Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pi
 |---|---|
 | `CBRM_USER`, `CBRM_PASSWORD` | the panel login |
 | `CBRM_CREDENTIALS_CMD` | instead: a command that prints the user and the password on two lines (`pass`, `sops`, a vault CLI, …) |
-| `CBRM_VMS` | optional allow-list, e.g. `"10001 10002"`: every other server is refused |
+| `CBRM_VMS` | allow-list, e.g. `"10001 10002"`: every other server is refused. Unset means every server of the account |
 | `CBRM_API_URL`, `CBRM_API_TOKEN` | use a running `cbrm serve` instead of logging in yourself |
 | `XDG_STATE_HOME` | where the session cookie and `audit.log` live (`$XDG_STATE_HOME/cbrm`, mode 0700) |
 

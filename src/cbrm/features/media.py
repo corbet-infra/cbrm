@@ -27,7 +27,9 @@ def _live(ctx, vm, name: str, refresh: str):
     """A component after its refresh method ran: the panel caches drives and boot order and shows the
     hypervisor's state only after the (hidden) Update button's method."""
     comp = ctx.product_page(vm).component(name)
-    return comp._send({}, [(refresh, [])]) if comp.offers(refresh) else comp
+    if not comp.offers(refresh):  # fail closed: without the refresh the panel shows stale state
+        raise ContractError(f"{name}: the panel no longer offers {refresh}")
+    return comp._send({}, [(refresh, [])])
 
 
 # -- reading -----------------------------------------------------------------------------------------
@@ -100,6 +102,8 @@ def _verify_mount(ctx, vm, result, drive, iso):
     """Only the exact file counts: the panel reports success even when an own ISO has not finished
     downloading, and then nothing is inserted."""
     want = result["mounted"]["file"]
+    if not want:
+        return False
     for _ in range(12):
         if want in _drive_content(ctx, vm, drive):
             return True
@@ -138,13 +142,17 @@ def _iso_unmount(ctx, vm, drive):
 def _iso_add(ctx, vm, url, title):
     if not re.match(r"https?://", url):
         raise ServiceError("url must be http(s)")
-    comp = ctx.product_page(vm).component("drive").call(("displayDownloadForm", []))
-    comp = comp.set(downloadUrlTitle=title, downloadUrl=url)
-    comp.require("downloadIso")
-    return ctx.send(f"Livewire drive: downloadUrlTitle={title!r}, downloadUrl={url!r}, downloadIso()",
-                    lambda: {"requested": {"title": title, "url": url},
-                             "messages": comp._send({}, [("downloadIso", [])]).messages(),
-                             "note": "the panel downloads in the background; `isos --search <title>` lists it when done"})
+    ctx.product_page(vm).component("drive").require("displayDownloadForm")
+
+    def go():
+        # The form and the model updates only happen for real: the panel may fetch the URL on update.
+        comp = ctx.product_page(vm).component("drive").call(("displayDownloadForm", []))
+        comp.require("downloadIso", models=("downloadUrlTitle", "downloadUrl"))
+        comp = comp.set(downloadUrlTitle=title, downloadUrl=url).require("downloadIso")
+        return {"requested": {"title": title, "url": url},
+                "messages": comp._send({}, [("downloadIso", [])]).messages(),
+                "note": "the panel downloads in the background; `isos --search <title>` lists it when done"}
+    return ctx.send(f"Livewire drive: displayDownloadForm(), downloadUrlTitle={title!r}, downloadUrl={url!r}, downloadIso()", go)
 
 
 def _verify_boot(ctx, vm, result, order):

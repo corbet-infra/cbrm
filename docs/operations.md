@@ -17,7 +17,7 @@ cbrm serve --host 127.0.0.1 --port 8765
 
 Put a TLS reverse proxy in front if clients connect over a network, or keep it on loopback / a VPN.
 Clients set `CBRM_API_URL` and `CBRM_API_TOKEN`; the panel password stays with the server.
-`GET /docs` shows the interactive API documentation (with the token).
+The OpenAPI schema is at `GET /openapi.json` (with the token, like every route); load it into any OpenAPI viewer.
 
 As a systemd service: run `cbrm serve` with `Environment=` / `EnvironmentFile=` for the variables
 above, `StateDirectory=cbrm` and `Environment=XDG_STATE_HOME=%S`.

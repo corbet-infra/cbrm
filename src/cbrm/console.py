@@ -31,6 +31,7 @@ class Console:
     def __init__(self, host: str, port: int, password: str):
         self.url, self.password = f"wss://{host}:{port}/websockify", password
         self._loop = asyncio.new_event_loop()
+        self._server = None
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self.client = None
 
@@ -60,6 +61,13 @@ class Console:
         writer.close()
 
     def __enter__(self) -> "Console":
+        try:
+            return self._open()
+        except BaseException:
+            self._stop()
+            raise
+
+    def _open(self) -> "Console":
         self._thread.start()
         self._server = asyncio.run_coroutine_threadsafe(
             asyncio.start_server(self._bridge, "127.0.0.1", 0), self._loop).result(10)
@@ -82,9 +90,16 @@ class Console:
             if self.client:
                 self.client.disconnect()
         finally:
-            asyncio.run_coroutine_threadsafe(self._close(), self._loop).result(10)
+            self._stop()
+
+    def _stop(self) -> None:
+        if self._thread.is_alive():
+            if getattr(self, "_server", None) is not None:
+                asyncio.run_coroutine_threadsafe(self._close(), self._loop).result(10)
             self._loop.call_soon_threadsafe(self._loop.stop)
             self._thread.join(5)
+        if not self._loop.is_running():
+            self._loop.close()
 
     async def _close(self) -> None:
         self._server.close()

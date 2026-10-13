@@ -35,7 +35,7 @@ def _parser() -> argparse.ArgumentParser:
             s.add_argument("--out", required=True, help="PNG file to write")
         if f.risk != "read":
             s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
-            s.add_argument("--dry-run", action="store_true", help="check everything, send nothing, show what would be sent")
+            s.add_argument("--dry-run", action="store_true", help="read and check everything, change nothing, show the request")
         if f.risk == "destroy":
             s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased")
         if f.risk == "cost":
@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> None:
                 if isinstance(r, dict) and r.get("verified") is False:
                     sys.exit(4)
     except ContractError as e:
-        sys.exit(f"cbrm: the panel changed, nothing was sent: {e}")
+        sys.exit(f"cbrm: the panel changed, so the change was not made: {e}")
     except (ServiceError, PanelError) as e:
         sys.exit(f"cbrm: {e}")
 

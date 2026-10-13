@@ -11,9 +11,10 @@ from __future__ import annotations
 import json
 import re
 
+import httpx
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-from .errors import ContractError
+from .errors import ContractError, PanelError
 
 _LAZY = re.compile(r"__lazyLoad\('([^']+)'\)")
 
@@ -39,10 +40,17 @@ class Page:
                 return c._send({}, [("__lazyLoad", [lazy.group(1)])]) if lazy else c
         raise ContractError(f"{self.path}: component '{suffix}' not found")
 
-    def require_endpoint(self, path_prefix: str) -> None:
-        """The page's own JavaScript still calls this endpoint (e.g. `/customer/rootserver/1/boot_order`)."""
-        if path_prefix not in self.html:
-            raise ContractError(f"{self.path}: the panel no longer calls {path_prefix}")
+    def require_endpoint(self, path: str) -> None:
+        """The page's own JavaScript still calls exactly this endpoint (e.g. `/customer/rootserver/1/boot_order`):
+        the path must be followed by a quote, `?`, `#` or whitespace, so `/stop` is not satisfied by `/stop-hard`."""
+        if not re.search(re.escape(path) + r"""(?=['"?#\s]|$)""", self.html):
+            raise ContractError(f"{self.path}: the panel no longer calls {path}")
+
+    def require_text(self, *fragments: str) -> None:
+        """The page still contains these exact fragments, e.g. a form field `name="template"` a request relies on."""
+        missing = [f for f in fragments if f not in self.html]
+        if missing:
+            raise ContractError(f"{self.path}: the panel no longer has {', '.join(missing)}")
 
 
 class Component:
@@ -84,8 +92,13 @@ class Component:
             "_token": p.csrf,
             "components": [{"snapshot": self.snapshot, "updates": updates,
                             "calls": [{"path": "", "method": m, "params": a} for m, a in calls]}]})
-        r.raise_for_status()
-        out = r.json()["components"][0]
+        if r.status_code == 419:
+            raise PanelError("the panel session expired during a Livewire call; run the command again")
+        try:
+            r.raise_for_status()
+            out = r.json()["components"][0]
+        except (httpx.HTTPError, ValueError, KeyError, IndexError) as e:
+            raise PanelError(f"Livewire call to {self.name} failed: {type(e).__name__}: {e}") from e
         effects = out.get("effects", {})
         return Component(p, self.name, out["snapshot"], effects.get("html", self.html), effects)
 
