@@ -7,6 +7,8 @@ import json
 import os
 import sys
 
+import httpx
+
 from .errors import ContractError, PanelError, ServiceError
 from .features import REGISTRY
 
@@ -101,6 +103,13 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(f"cbrm: the panel changed, so the change was not made: {e}")
     except (ServiceError, PanelError) as e:
         sys.exit(f"cbrm: {e}")
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError, httpx.HTTPError) as e:
+        # Something the panel (or the cbrm API) sent that no check caught: one line, never a traceback.
+        # CBRM_DEBUG=1 re-raises, for finding the check that is missing.
+        if os.environ.get("CBRM_DEBUG"):
+            raise
+        sys.exit(f"cbrm: unexpected content from the panel or the cbrm API ({type(e).__name__}: {e}); if this was a "
+                 "change, look at the panel or run a read feature to see whether it was made")
 
 
 if __name__ == "__main__":

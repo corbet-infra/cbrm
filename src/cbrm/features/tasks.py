@@ -6,7 +6,7 @@ import datetime
 import re
 
 from ..errors import ContractError, ServiceError
-from .common import (get_json, panel_date, post_form, require_names, require_post, settle, text, tolerant)
+from .common import (get_json, panel_answer, panel_date, post_form, require_names, require_post, settle, text, tolerant)
 from .registry import Param, feature
 
 
@@ -100,7 +100,7 @@ def _task_create(ctx, vm, action, interval, start):
     expected = {"action": options["methode"][action], "interval": options["interval"][interval],
                 "next": when.strftime("%d.%m.%Y %H:%M")}
     return ctx.send(f"POST {path} {data}",
-                    lambda: {**post_form(ctx, page, path, data), "task": expected, "known_ids": known})
+                    lambda: {**panel_answer(post_form(ctx, page, path, data)), "task": expected, "known_ids": known})
 
 
 def _check_delete(ctx, vm):
@@ -128,4 +128,4 @@ def _task_delete(ctx, vm, task):
         raise ServiceError(f"VM {vm} has no task {task!r}; it has {[t['id'] for t in tasks]}")
     path = f"/customer/rootserver/{vm}/scheduled_task/delete/{found[0]['id']}"
     return ctx.send(f"GET {path} [{found[0]['label']}, {found[0]['repeat']}, next {found[0]['next']}]",
-                    lambda: get_json(ctx, path))
+                    lambda: panel_answer(get_json(ctx, path)))

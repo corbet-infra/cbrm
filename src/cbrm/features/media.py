@@ -5,6 +5,7 @@ import re
 import time
 
 from ..errors import ContractError, ServiceError
+from .common import panel_answer
 from .registry import Param, feature
 
 
@@ -171,7 +172,8 @@ def _boot_order_set(ctx, vm, order):
     ctx.product_page(vm).require_endpoint(f"/customer/rootserver/{vm}/boot_order")
     query = ";".join(order)
     return ctx.send(f"GET /customer/rootserver/{vm}/boot_order?boot_order={query}",
-                    lambda: ctx.panel.get_json(f"/customer/rootserver/{vm}/boot_order", {"boot_order": query}))
+                    lambda: panel_answer(ctx.panel.get_json(f"/customer/rootserver/{vm}/boot_order",
+                                                              {"boot_order": query})))
 
 
 def _rescue_is(want: bool):

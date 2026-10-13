@@ -142,6 +142,15 @@ def ok(result) -> bool:
     return isinstance(result, dict) and result.get("state") == "success"
 
 
+def panel_answer(body) -> dict:
+    """The panel's answer to a changing request, reduced to `state` and `message`. Whatever else the panel
+    adds to its JSON is not ours to keep: feature results end up in the audit log and in assistants'
+    context, so a feature adds only fields it has chosen itself."""
+    if not isinstance(body, dict):
+        return {}
+    return {k: body[k] for k in ("state", "message") if k in body}
+
+
 # -- verification ----------------------------------------------------------------------------------------
 
 def tolerant(fn: Callable) -> Callable:

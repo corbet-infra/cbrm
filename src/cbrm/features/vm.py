@@ -9,6 +9,7 @@ from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from ..errors import ContractError, ServiceError
 from ..panel import POWER_ACTIONS
+from .common import panel_answer
 from .registry import Param, feature
 
 
@@ -82,7 +83,7 @@ def _check_power(ctx, vm):
          (Param("action", "what to do", choices=POWER_ACTIONS),), verify=_verify_power, check=_check_power)
 def _power(ctx, vm, action):
     _check_power(ctx, vm)
-    return ctx.send(f"GET /customer/rootserver/{vm}/{action}", lambda: ctx.panel.power(vm, action))
+    return ctx.send(f"GET /customer/rootserver/{vm}/{action}", lambda: panel_answer(ctx.panel.power(vm, action)))
 
 
 def _check_set_root_password(ctx, vm):
@@ -97,8 +98,8 @@ def _check_set_root_password(ctx, vm):
 def _set_root_password(ctx, vm, password=None):
     _check_set_root_password(ctx, vm)
     password = password or "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
-    r = ctx.send(f"POST /customer/rootserver/{vm}/setrootpassword", lambda: ctx.panel.set_root_password(vm, password))
-    return r if r.get("dry_run") else {**r, "root_password": password}
+    return ctx.send(f"POST /customer/rootserver/{vm}/setrootpassword",
+                    lambda: {**panel_answer(ctx.panel.set_root_password(vm, password)), "root_password": password})
 
 
 @feature("console-input", "change", "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); "
@@ -148,4 +149,4 @@ def _reinstall(ctx, vm, template, ssh_keys=()):
         raise ServiceError(f"unknown SSH key(s) {missing}; stored: {', '.join(keys)}")
     ids = [keys[k] for k in ssh_keys]
     return ctx.send(f"POST /customer/rootserver/{vm}/reinstall template={templates[template]} ssh_keys={ids}",
-                    lambda: ctx.panel.reinstall(vm, templates[template], ids))
+                    lambda: panel_answer(ctx.panel.reinstall(vm, templates[template], ids)))
