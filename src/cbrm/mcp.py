@@ -2,11 +2,14 @@
 CBRM_API_URL set it is a client of a remote `cbrm serve` and never sees the panel credential."""
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP, Image
+try:  # mcp >= 2 renamed FastMCP to MCPServer; the API cbrm uses is the same
+    from mcp.server.mcpserver import Image, MCPServer as _Server
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import FastMCP as _Server, Image
 
 from .client import backend
 
-mcp = FastMCP("cbrm", instructions=(
+mcp = _Server("cbrm", instructions=(
     "Manage BERO HOST (bero-host.de) KVM rootservers through the customer panel and the VNC console. "
     "Read first (bero_vms, bero_status, bero_logs, bero_console). Changing tools need confirm=<vm>. "
     "`system` in the status is the last template BERO installed, not necessarily what runs. "
@@ -60,3 +63,7 @@ def bero_console_input(vm: str, confirm: str, text: str = "", keys: list[str] | 
 
 def main() -> None:
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

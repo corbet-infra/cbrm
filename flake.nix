@@ -6,7 +6,7 @@
     in {
       packages = forAll (pkgs: rec {
         cbrm = pkgs.python3Packages.buildPythonApplication {
-          pname = "cbrm"; version = "0.1.0"; pyproject = true; src = ./.;
+          pname = "cbrm"; version = "0.1.1"; pyproject = true; src = ./.;
           build-system = [ pkgs.python3Packages.hatchling ];
           dependencies = with pkgs.python3Packages; [ httpx selectolax websockets vncdotool pillow mcp fastapi uvicorn ];
           nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];

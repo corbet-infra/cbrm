@@ -36,8 +36,9 @@ panel where a person sees what they click.
 ## Install
 
 ```sh
+pipx install cbrm                                                 # from PyPI (or: pip install cbrm)
+uvx cbrm vms                                                      # run without installing (uv)
 nix run git+https://git.corbet.ch/corbet-infra/cbrm -- vms        # Nix (flake)
-pipx install git+https://git.corbet.ch/corbet-infra/cbrm         # pipx / pip
 ```
 
 Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pillow, FastAPI, uvicorn, mcp.
@@ -65,7 +66,7 @@ cbrm power 10002 restart --confirm 10002
 For Claude Code, Claude Desktop or any MCP client (stdio):
 
 ```json
-{ "mcpServers": { "bero": { "command": "cbrm-mcp",
+{ "mcpServers": { "bero": { "command": "uvx", "args": ["--from", "cbrm", "cbrm-mcp"],
     "env": { "CBRM_CREDENTIALS_CMD": "pass show hosting/bero-host", "CBRM_VMS": "10001 10002" } } } }
 ```
 
