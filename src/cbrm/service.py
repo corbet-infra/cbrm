@@ -119,12 +119,15 @@ class Service:
         return out
 
     def check(self, vm: str) -> dict[str, str]:
-        """`cbrm doctor`: for every feature, read-only proof that the panel still offers what it needs."""
+        """`cbrm doctor`: for every feature, read-only proof that the panel still offers what it needs.
+        One Ctx serves all checks, so the product page, the account page and each lazy component are loaded once
+        and every check looks at the same rendering. The checks only read: a check that needs state fresher than
+        that (one that re-reads after a change) calls `ctx.fresh(vm)` itself, none does today."""
         if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")
         out = {}
+        ctx = Ctx(self.panel)
         for f in REGISTRY.values():
-            ctx = Ctx(self.panel)
             try:
                 if f.check:
                     f.check(ctx, vm)

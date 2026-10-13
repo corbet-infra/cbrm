@@ -16,7 +16,7 @@ from cbrm.features import REGISTRY, account, common, registry, tasks
 from cbrm.service import Service
 
 import test_service
-from test_wave2 import ACCOUNT, P, PRODUCT, fingerprint, make_key, sent_nothing, svc_for
+from test_wave2 import A, ACCOUNT, P, PRODUCT, fingerprint, make_key, sent_nothing, svc_for
 
 
 @pytest.fixture
@@ -493,3 +493,42 @@ def test_task_create_dry_run_says_the_task_repeats_until_it_is_deleted(svc, cloc
                         dry_run=True)["would"]
         assert f"repeats {interval}" in would and "until it is deleted" in would and "task-delete" in would
     assert sent_nothing(svc)
+
+
+# -- 11: doctor shares one context: every page and lazy component is loaded once -----------------------------
+
+def count_pages(svc):
+    """Wrap panel.page and return the list of paths that were fetched."""
+    fetched, real = [], svc.panel.page
+    svc.panel.page = lambda path: (fetched.append(path), real(path))[1]
+    return fetched
+
+
+def test_doctor_loads_each_page_once(svc):
+    fetched = count_pages(svc)
+    report = svc.check("1")
+    assert fetched.count(P) == 1 and fetched.count(A) == 1 and len(fetched) == 2, fetched
+    assert report["backups"] == "ok" and report["account-ssh-keys"] == "ok" and report["tasks"] == "ok"
+
+
+LAZY = ('<html><head><meta name="csrf-token" content="TOKEN"><script data-update-uri="https://bero-host.de/lw/update">'
+        '</script></head><body><div wire:snapshot=\'{"data":{},"memo":{"name":"customerarea.products.rootserver.backup"}}\' '
+        'x-intersect="$wire.__lazyLoad(\'abc\')"></div></body></html>')
+
+
+def test_a_page_loads_a_lazy_component_once(tmp_path):
+    from cbrm.livewire import Page
+    panel = test_service.FakePanel(tmp_path, LAZY)
+    page = Page(panel, "/customer/products/2")
+    first = page.component("backup")
+    assert page.component("backup") is first and page.component("backup") is first
+    assert panel.calls.count(("livewire", "__lazyLoad")) == 1
+    assert Page(panel, "/customer/products/2").component("backup") is not first  # a new Page (ctx.fresh) loads again
+    assert panel.calls.count(("livewire", "__lazyLoad")) == 2
+
+
+def test_doctor_loads_a_lazy_component_once(tmp_path):
+    svc = Service(test_service.FakePanel(tmp_path, LAZY), allow=["1"])
+    report = svc.check("1")
+    assert svc.panel.calls.count(("livewire", "__lazyLoad")) == 1, svc.panel.calls
+    assert report["backup-create"].startswith("BROKEN")  # the synthetic page has no tiles: reported, not crashed

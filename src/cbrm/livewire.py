@@ -28,16 +28,25 @@ class Page:
         if meta is None or update is None:
             raise ContractError(f"{path}: no Livewire on this page (CSRF token or update URI missing)")
         self.csrf, self.update_uri = meta.attributes["content"], update.attributes["data-update-uri"]
+        self._components: dict[str, "Component"] = {}
 
     def component(self, suffix: str) -> "Component":
-        """The component whose name is `suffix` or ends in `.suffix`, rendered (lazy ones are loaded)."""
+        """The component whose name is `suffix` or ends in `.suffix`, rendered (lazy ones are loaded). A page loads
+        each component once: a Component never changes (a call returns a new one), so `ctx.fresh(vm)` (a new Page)
+        is how to see the panel's state after a change."""
+        if suffix in self._components:
+            return self._components[suffix]
         for node in self.tree.css("[wire\\:snapshot]"):
             snapshot = node.attributes["wire:snapshot"]
-            name = json.loads(snapshot)["memo"]["name"]
+            try:
+                name = json.loads(snapshot)["memo"]["name"]
+            except (ValueError, KeyError, TypeError):
+                raise ContractError(f"{self.path}: a Livewire component whose snapshot cbrm cannot read") from None
             if name == suffix or name.endswith("." + suffix):
                 c = Component(self, name, snapshot, node.html)
                 lazy = _LAZY.search(node.attributes.get("x-intersect") or "")
-                return c._send({}, [("__lazyLoad", [lazy.group(1)])]) if lazy else c
+                self._components[suffix] = c._send({}, [("__lazyLoad", [lazy.group(1)])]) if lazy else c
+                return self._components[suffix]
         raise ContractError(f"{self.path}: component '{suffix}' not found")
 
     def require_endpoint(self, path: str) -> None:
