@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 — 2026-10-13
 
 Fixes from a second independent review (the 0.4.0 features):
 
