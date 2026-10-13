@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1 — 2026-10-13
+
+- Fix: every command that used the console hung when the process exited (vncdotool's reactor thread
+  was stopped too late). A regression test runs a process through it.
+- Console: hard deadline per operation; the panel's noVNC proxy is retried while it starts;
+  `console-input --repeat/--interval` to catch a boot menu.
+- `drives` and `boot-order` read the hypervisor's live state (the panel caches both); `iso-mount` is
+  verified only when exactly that file is in the drive (the panel reports success for an own ISO that is
+  still downloading).
+- New: `drive-delete`.
+- README: absolute links (they work on PyPI), the ISO boot recipe, a status and roadmap section.
+
 ## 0.3.0 — 2026-10-13
 
 - Architecture: a feature registry with risk classes (read, secret, change, destroy, cost); CLI, HTTP

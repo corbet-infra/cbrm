@@ -7,10 +7,10 @@ server on or off, type at its console. It is one package with five faces:
 | You are | Use | Start with |
 |---|---|---|
 | a person at a terminal | the CLI `cbrm` | `cbrm vms` |
-| a team or a service | the HTTP API `cbrm serve` (OpenAPI, bearer token) | [docs/operations.md](docs/operations.md) |
-| an AI assistant (Claude, …) | the MCP server `cbrm-mcp` and the skill in [`skills/bero/`](skills/bero/SKILL.md) | [MCP setup](#mcp) |
-| a Python program | `from cbrm import Panel, Console` or `cbrm.service.Service` | [docs/architecture.md](docs/architecture.md) |
-| a contributor | Forgejo, see [CONTRIBUTING.md](CONTRIBUTING.md) | `nix develop` |
+| a team or a service | the HTTP API `cbrm serve` (OpenAPI, bearer token) | [docs/operations.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/docs/operations.md) |
+| an AI assistant (Claude, …) | the MCP server `cbrm-mcp` and the skill in [`skills/bero/`](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/skills/bero/SKILL.md) | [MCP setup](#mcp) |
+| a Python program | `from cbrm import Panel, Console` or `cbrm.service.Service` | [docs/architecture.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/docs/architecture.md) |
+| a contributor | Forgejo, see [CONTRIBUTING.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/CONTRIBUTING.md) | `nix develop` |
 
 BERO HOST is a German provider of prepaid game, root and virtual servers. Its panel is pleasant to use
 by hand; cbrm exists for the moments when a script or an assistant should do the same thing. It is an
@@ -107,26 +107,48 @@ For Claude Code, Claude Desktop or any MCP client (stdio):
 
 With a shared API the assistant never sees the panel password:
 `"env": { "CBRM_API_URL": "https://cbrm.example.internal", "CBRM_API_TOKEN": "…" }`.
-The skill [`skills/bero/SKILL.md`](skills/bero/SKILL.md) teaches an agent the safe order of work
+The skill [`skills/bero/SKILL.md`](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/skills/bero/SKILL.md) teaches an agent the safe order of work
 (read, confirm, act, look again); copy it into your agent's skill directory.
 
 ## Recipes
 
 | Goal | Steps |
 |---|---|
-| Fresh template with your SSH key | `cbrm reinstall <vm> --template "Arch Linux" --ssh-keys <name> --confirm <vm> --confirm-destroy <vm>`, then `ssh root@<ip>` |
-| Boot your own ISO | `cbrm iso-add <vm> --url <https url> --title <t> --confirm <vm>` → `cbrm isos <vm> --search <t>` → `cbrm iso-mount <vm> --drive ide0 --iso <id> --confirm <vm>` → `cbrm boot-order-set <vm> --order ide0 scsi0 net0 ide2 --confirm <vm>` → `cbrm power <vm> --action restart --confirm <vm>` → `cbrm console <vm> --out s.png` |
-| Hung server | `cbrm console` → `cbrm power --action restart` → `cbrm console` |
+| Fresh template with your SSH key | `cbrm reinstall <vm> --template "Arch Linux" --ssh-keys <name> --confirm <vm> --confirm-destroy <vm>`, then `ssh root@<ip>` (about 90 s later) |
+| Hung server | `cbrm console <vm> --out s.png` → `cbrm power <vm> --action restart --confirm <vm>` → `cbrm console …` |
+| What happened to my server? | `cbrm logs <vm>`: reinstalls, restarts and starts as the panel recorded them |
+| Is cbrm still in sync with the panel? | `cbrm doctor <vm>` |
+
+### Booting your own ISO (for example to install any OS)
+
+1. `cbrm iso-add <vm> --url <public https url> --title <t> --confirm <vm>`. The panel confirms at once but
+   **downloads in the background** (a 1.5 GB image took about 30 minutes); until it is done, inserting it
+   reports success and inserts nothing — cbrm's `verified: false` tells you.
+2. `cbrm isos <vm> --search <t>` → `cbrm iso-mount <vm> --drive ide2 --iso <id> --confirm <vm>`.
+   Keep **one** CD drive (`cbrm drive-delete <vm> --drive ide0 …` if a reinstall created a second one).
+3. **After** mounting: `cbrm boot-order-set <vm> --order ide2 scsi0 net0 --confirm <vm>`.
+4. `cbrm power <vm> --action stop …`, then `--action start`. The console becomes reachable about 20 s after
+   the start; if your ISO has a boot menu, `cbrm console-input <vm> --keys enter --repeat 3 --interval 0.5 …`
+   right away selects its default entry. `cbrm console` shows what is on the screen.
+
+## Status
+
+cbrm is young (0.x) and used in production by its authors on BERO HOST KVM rootservers. Covered today:
+the server lifecycle — status, action log, console (screenshot and input), power, root password,
+reinstall with SSH keys, own ISOs, CD drives, boot order and rescue system. Planned, roughly in this order:
+network and reverse DNS, backups (list, create, restore, delete), scheduled tasks, hostname and product
+name, the account's SSH keys, support tickets, and — as the `cost` risk class — renewals, upgrades and
+credit. Issues and pull requests are welcome on the primary repository.
 
 ## How it works
 
 BERO HOST does not publish an API, so cbrm uses what the panel itself uses: its login form, its
 server-rendered pages, one Livewire request for the action log, the JSON endpoints behind its power
 buttons, and the noVNC console session it hands out (a Proxmox VNC websocket, bridged to a local port
-and driven with vncdotool). Details in [docs/architecture.md](docs/architecture.md).
+and driven with vncdotool). Details in [docs/architecture.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/docs/architecture.md).
 
 If the panel changes, cbrm fails with a clear error instead of guessing; see
-[docs/operations.md](docs/operations.md#when-the-panel-changes).
+[docs/operations.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/docs/operations.md#when-the-panel-changes).
 
 ## Where the code lives
 
@@ -140,5 +162,5 @@ Please open issues and pull requests on the primary; changes pushed to a mirror 
 ## License
 
 **LGPL-3.0-only WITH LGPL-3.0-linking-exception** — use cbrm from any application under any license;
-changes to cbrm itself stay open. Details in [LICENSE.md](LICENSE.md). Contributions are welcome under
-the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
+changes to cbrm itself stay open. Details in [LICENSE.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/LICENSE.md). Contributions are welcome under
+the same terms; see [CONTRIBUTING.md](https://git.corbet.ch/corbet-infra/cbrm/src/branch/main/CONTRIBUTING.md).
