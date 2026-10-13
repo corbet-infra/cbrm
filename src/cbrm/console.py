@@ -4,19 +4,29 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import concurrent.futures
 import ssl
 import threading
+import time
 
 import websockets
 from vncdotool import api as vnc
 
-# vncdotool runs one Twisted reactor per process and cannot restart it: stop it once, at exit,
-# so long-running servers (API, MCP) can open many console sessions.
-atexit.register(vnc.shutdown)
+from .errors import PanelError
+
+# vncdotool runs one Twisted reactor per process and cannot restart it: stop it once, at exit, so
+# long-running servers (API, MCP) can open many console sessions. It must run BEFORE the interpreter
+# joins non-daemon threads (the reactor thread is one), which plain atexit does not: use the hook
+# concurrent.futures uses, and atexit only where it is missing.
+_register = getattr(threading, "_register_atexit", atexit.register)
+_register(vnc.shutdown)
 
 
 class Console:
     """Use as a context manager: `with Console(host, port, ticket) as c: c.capture("out.png")`."""
+
+    #: hard limit for one console operation; a VM changing resolution while it boots can stall a VNC client
+    DEADLINE = 60
 
     def __init__(self, host: str, port: int, password: str):
         self.url, self.password = f"wss://{host}:{port}/websockify", password
@@ -24,9 +34,20 @@ class Console:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self.client = None
 
+    async def _connect(self):
+        """The panel starts the console proxy on demand: right after the session is handed out its port may
+        still refuse connections, so retry for a while."""
+        for attempt in range(20):
+            try:
+                return await websockets.connect(self.url, subprotocols=["binary"], ssl=ssl.create_default_context(),
+                                                max_size=None)
+            except (ConnectionRefusedError, OSError):
+                if attempt == 19:
+                    raise
+                await asyncio.sleep(1)
+
     async def _bridge(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        async with websockets.connect(self.url, subprotocols=["binary"], ssl=ssl.create_default_context(),
-                                      max_size=None) as ws:
+        async with await self._connect() as ws:
             async def up():
                 while data := await reader.read(65536):
                     await ws.send(data)
@@ -43,8 +64,18 @@ class Console:
         self._server = asyncio.run_coroutine_threadsafe(
             asyncio.start_server(self._bridge, "127.0.0.1", 0), self._loop).result(10)
         port = self._server.sockets[0].getsockname()[1]
-        self.client = vnc.connect(f"127.0.0.1::{port}", password=self.password, timeout=30)
+        self.client = self._bounded(lambda: vnc.connect(f"127.0.0.1::{port}", password=self.password, timeout=30))
         return self
+
+    def _bounded(self, fn, seconds: float | None = None):
+        """Run one console operation with a hard deadline; a stalled VNC session raises instead of hanging."""
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
+            return pool.submit(fn).result(timeout=seconds or self.DEADLINE)
+        except concurrent.futures.TimeoutError:
+            raise PanelError(f"the console did not answer within {seconds or self.DEADLINE} s") from None
+        finally:
+            pool.shutdown(wait=False)
 
     def __exit__(self, *exc) -> None:
         try:
@@ -63,20 +94,26 @@ class Console:
         await asyncio.gather(*tasks, return_exceptions=True)
 
     def capture(self, path: str) -> str:
-        self.client.captureScreen(path)
+        self._bounded(lambda: self.client.captureScreen(path))
         return path
 
     def png(self) -> bytes:
         import io
-        self.client.refreshScreen()
-        buf = io.BytesIO()
-        self.client.screen.save(buf, "PNG")
-        return buf.getvalue()
+
+        def grab():
+            self.client.refreshScreen()
+            buf = io.BytesIO()
+            self.client.screen.save(buf, "PNG")
+            return buf.getvalue()
+        return self._bounded(grab)
 
     def type(self, text: str) -> None:
-        for ch in text:
-            self.client.keyPress(ch)
+        self._bounded(lambda: [self.client.keyPress(ch) for ch in text])
 
-    def keys(self, *names: str) -> None:
-        for name in names:  # vncdotool key names: enter, ctrl-c, alt-f2, f1, ...
-            self.client.keyPress(name)
+    def keys(self, *names: str, repeat: int = 1, interval: float = 1.0) -> None:
+        """Press the keys (vncdotool names: enter, ctrl-c, alt-f2, f1, ...), `repeat` times, `interval` s apart:
+        e.g. Enter every second while a VM boots catches its boot menu without guessing the moment."""
+        for i in range(repeat):
+            if i:
+                time.sleep(interval)
+            self._bounded(lambda: [self.client.keyPress(n) for n in names])
