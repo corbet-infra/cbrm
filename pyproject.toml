@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cbrm"
+version = "0.1.0"
+description = "BERO HOST management: the customer panel and its VNC console, as a library and a CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.27", "selectolax>=0.3.21", "websockets>=12", "vncdotool>=1.2", "pillow>=10", "mcp>=1.2", "fastapi>=0.110", "uvicorn>=0.29"]
+
+[project.scripts]
+cbrm = "cbrm.cli:main"
+cbrm-mcp = "cbrm.mcp:main"
