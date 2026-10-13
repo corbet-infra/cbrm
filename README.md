@@ -95,4 +95,6 @@ Please open issues and pull requests on the primary; changes pushed to a mirror 
 
 ## License
 
-See [LICENSE](LICENSE). Contributions are welcome under the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
+**LGPL-3.0-only WITH LGPL-3.0-linking-exception** — use cbrm from any application under any license;
+changes to cbrm itself stay open. Details in [LICENSE.md](LICENSE.md). Contributions are welcome under
+the same terms; see [CONTRIBUTING.md](CONTRIBUTING.md).
