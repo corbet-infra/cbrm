@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+Fixes from a second independent review (the 0.4.0 features):
+
+- `account-ssh-key-delete` deletes only the key whose tile was shown: the id is parsed from the tile's own
+  `selectSshKey(N)` button and must equal the tile's key id, and after selecting, the panel's `selectedKeyId`
+  and `selectedKeyName` must both be the tile's; any mismatch is a contract error before `deleteSshKey` is sent.
+  A key id that is not a number is a contract error, not a raw `ValueError`.
+- `account-ssh-key-import`: the public key is parsed strictly (SSH wire format of each supported type, no
+  trailing bytes, canonical base64, RSA of at least 2048 bits, at most 8 KiB, control characters refused in
+  the comment; armor markers are refused only as such, a comment like `a-----b` is fine; non-ASCII key
+  data no longer escapes as a `ValueError`). The Livewire state it writes to (`importSshKeyName`,
+  `importSshKeyPublicKey`, `addSshKeyContentType`) is required before anything is sent.
+- No more fake verification: `backup-create` re-reads the backups and is `verified: true` only when a new
+  backup or one free slot less is listed (`false` if not, `null` if the panel cannot be read);
+  `backup-restore` and `network-reset` no longer pass off the panel's own answer as verification
+  (`verified: null`). An unknown verification stays `null` instead of being turned into `false`.
+- `task-create` is now a **destroying** feature (both confirmations): the task acts later and repeatedly
+  without you. A start in the past (panel time, Europe/Berlin) and a task identical to an existing one are
+  refused; the dry run says the task repeats at the interval until it is deleted.
+- A backup tile without exactly one id is a contract error (it used to become an id `null`); doctor's
+  check of the backup features requires it.
+- `network-reset` requires the two input fields the panel's script reads (`changeRootpasswordPassword`,
+  `changeRootpasswordPasswordConfirmation`), sends exactly their values and refuses if they are missing or
+  not empty.
+- Panel answers: results (and so the audit log) keep only the panel's `state` and `message`. `renewal`
+  returns the payment as amount and method name only (never an account identifier) and describes the
+  upgrade section in its own words instead of returning component text. An unreadable remaining runtime
+  is a contract error; the command line prints one line, not a traceback, for content it did not expect
+  (`CBRM_DEBUG=1` re-raises).
+- `cbrm doctor` shares one context across its checks: the product page, the account page and every lazy
+  component are loaded once.
+- Documented: the `account-*` features act on the whole account and are **not limited by the VM allow-list**
+  (README, skill, architecture, the features' help).
+- `tzdata` is a dependency on Windows (the start of a task is checked against the panel's time zone).
+
 ## 0.4.0 — 2026-10-13
 
 - New reads: `addresses`, `backups`, `automatic-backup-status`, `tasks`, `stats`, `stats-history`, `renewal`

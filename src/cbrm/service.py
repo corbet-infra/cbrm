@@ -13,7 +13,9 @@ from .panel import Panel
 
 class Service:
     """Use this, not `Panel`, from code: Panel is the raw transport and applies none of the rules.
-    An empty allow-list (CBRM_VMS unset) means every VM of the account."""
+    An empty allow-list (CBRM_VMS unset) means every VM of the account. The allow-list names the VMs a caller may
+    act on; it does not scope the account-wide features (`account-*`): those act on the whole account, whichever
+    allowed VM names the context."""
 
     def __init__(self, panel: Panel, allow: list[str] | None = None, audit: Path | None = None):
         self.panel = panel

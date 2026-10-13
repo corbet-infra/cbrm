@@ -11,7 +11,7 @@ command-line argument.
 ```sh
 export CBRM_CREDENTIALS_CMD="pass show hosting/bero-host"
 export CBRM_API_TOKEN="$(openssl rand -base64 32)"   # give this to the clients
-export CBRM_VMS="10001 10002 10003"                  # optional allow-list
+export CBRM_VMS="10001 10002 10003"                  # optional allow-list (does not limit the account-* features)
 cbrm serve --host 127.0.0.1 --port 8765
 ```
 

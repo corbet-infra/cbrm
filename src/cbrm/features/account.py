@@ -1,7 +1,9 @@
 """Account-wide features: the SSH keys stored in the panel account (they can be baked into a reinstall).
 
-These are not per VM. The VM argument names the account context: it must belong to the account, the
-allow-list applies to it, and `confirm=<vm>` repeats it like for every other changing feature.
+These are not per VM. The VM argument only names the account context: it must belong to the account, it must be
+on the allow-list, and `confirm=<vm>` repeats it like for every other changing feature. What these features touch
+is the whole account (every stored key, whichever servers use it): their effect is NOT limited by the VM
+allow-list, which only decides which VM may be named.
 """
 from __future__ import annotations
 
@@ -202,7 +204,8 @@ def _verify_import(ctx, vm, result, name, public_key):
 
 
 @feature("account-ssh-key-import", "change",
-         "Store a public SSH key in the panel account (account-wide; it can then be baked into a reinstall)",
+         "Store a public SSH key in the panel account (account-wide, not limited by the VM allow-list; it can then be "
+         "baked into a reinstall)",
          (Param("name", "the key's name"), Param("public_key", "one OpenSSH public key line (never a private key)",
                                                  secret=True)),
          verify=_verify_import, check=_check_import)
@@ -231,7 +234,8 @@ def _verify_delete(ctx, vm, result, key):
 
 
 @feature("account-ssh-key-delete", "change",
-         "Delete an SSH key from the panel account (account-wide; servers already installed keep it)",
+         "Delete an SSH key from the panel account (account-wide, not limited by the VM allow-list; servers already "
+         "installed keep it)",
          (Param("key", "the key's id or name from `account-ssh-keys`"),), verify=_verify_delete, check=_check_delete)
 def _account_ssh_key_delete(ctx, vm, key):
     comp = _check_keys(ctx, vm).require("deleteSshKey")

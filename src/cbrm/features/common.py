@@ -2,8 +2,9 @@
 POSTs, panel requests with readable errors, input validation and tolerant verification.
 
 Account-wide features (their names start with `account-`) still take the VM argument: it names the
-account context, so the allow-list and `confirm=<vm>` of `cbrm.service.Service` apply to them exactly as
-to every other feature. `account_page` checks that the VM belongs to the account.
+account context, so the allow-list and `confirm=<vm>` of `cbrm.service.Service` decide which VM may name it,
+exactly as for every other feature. They do NOT scope the effect: such a feature acts on the whole account,
+whatever the allow-list says. `account_page` checks that the VM belongs to the account.
 """
 from __future__ import annotations
 
