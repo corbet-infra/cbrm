@@ -23,9 +23,13 @@ which a dry run turns into a description.
 |---|---|
 | `Component.require` | a Livewire method or field a feature needs is gone → `ContractError`, nothing sent |
 | `Page.require_endpoint` | the page's script no longer calls an endpoint → `ContractError` |
+| `common.require_post` | the page's own `$.post` to an endpoint no longer sends exactly the fields cbrm sends → `ContractError` |
 | parsers | an expected element is missing → `ContractError` instead of an empty answer |
 | `verify` | after a change, the panel does not show the effect → `verified: false` (CLI exit 4) |
 | `cbrm doctor` | runs every feature's check read-only → `ok` / `BROKEN: reason` |
+
+Account-wide features (`account-*`) read `/customer/account` instead of a product page. The VM argument
+still names the account context, so the allow-list and the confirmations of `Service` apply to them unchanged.
 
 Interfaces report a contract error distinctly: CLI "the panel changed, nothing was sent", HTTP 409,
 an MCP tool error with the same text.

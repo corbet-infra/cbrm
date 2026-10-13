@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- New reads: `addresses`, `backups`, `automatic-backup-status`, `tasks`, `stats`, `stats-history`, `renewal`
+  (runtime left, auto-renewal with the prices the panel quotes, upgrade possible or not, credit),
+  `account-credit`, `account-ssh-keys`.
+- New changes: `rdns-set`, `hostname-set`, `rename`, `backup-create`, `task-create`, `task-delete`,
+  `account-ssh-key-import` (public keys only; a private key is refused), `account-ssh-key-delete`.
+- New destroying features (two confirmations): `backup-delete`, `backup-restore`, `network-reset`.
+- Account-wide features are named `account-*`; `<vm>` names the account context, so the allow-list and
+  `--confirm <vm>` apply as before.
+- Contract checks compare the field names of the page's own POSTs and the options of its forms (task
+  actions and intervals) with what cbrm sends, before anything is sent.
+- Not included on purpose: the paying actions (extend, upgrade, credit top-up) and backup file restore.
+
 ## 0.3.2 — 2026-10-13
 
 Fixes from an independent review before the public announcement:

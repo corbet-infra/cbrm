@@ -81,6 +81,10 @@ Every changing command takes `--dry-run`: cbrm reads the panel (it may refresh o
 changes nothing), checks everything, and shows the exact request it would send — without sending it or any
 other request that changes or submits something. A dry run of a `secret` feature reveals nothing.
 
+Features named `account-*` act on the whole account (stored SSH keys, credit), not on one server. They
+still take `<vm>`: it names the account context, must belong to the account, must be on the allow-list
+(`CBRM_VMS`) and is repeated as `--confirm <vm>` like for every other change.
+
 ### When BERO changes the panel
 
 cbrm checks before every change that the panel still offers exactly what the feature relies on (the
@@ -141,6 +145,9 @@ The skill [`skills/bero/SKILL.md`](https://git.corbet.ch/corbet-infra/cbrm/src/b
 | Hung server | `cbrm console <vm> --out s.png` → `cbrm power <vm> --action restart --confirm <vm>` → `cbrm console …` |
 | What happened to my server? | `cbrm logs <vm>`: reinstalls, restarts and starts as the panel recorded them |
 | Is cbrm still in sync with the panel? | `cbrm doctor <vm>` |
+| Back up before a risky change | `cbrm backups <vm>` (free slot?) → `cbrm backup-create <vm> --title <t> --confirm <vm>` → later `cbrm backups <vm>` shows it when the panel has finished |
+| Reverse DNS for a mail server | `cbrm addresses <vm>` → `cbrm rdns-set <vm> --address <ip> --name mail.example.org --confirm <vm>` (`verified: true` once the panel shows it) |
+| Server unreachable after a firewall or network change | `cbrm console <vm> --out s.png`, then `cbrm network-reset <vm> --confirm <vm> --confirm-destroy <vm>` — it resets the panel-managed network configuration and the software firewall |
 
 ### Booting your own ISO (for example to install any OS)
 
@@ -158,10 +165,13 @@ The skill [`skills/bero/SKILL.md`](https://git.corbet.ch/corbet-infra/cbrm/src/b
 
 cbrm is young (0.x) and used in production by its authors on BERO HOST KVM rootservers. Covered today:
 the server lifecycle — status, action log, console (screenshot and input), power, root password,
-reinstall with SSH keys, own ISOs, CD drives, boot order and rescue system. Planned, roughly in this order:
-network and reverse DNS, backups (list, create, restore, delete), scheduled tasks, hostname and product
-name, the account's SSH keys, support tickets, and — as the `cost` risk class — renewals, upgrades and
-credit. Issues and pull requests are welcome on the primary repository.
+reinstall with SSH keys, own ISOs, CD drives, boot order and rescue system — and, new since 0.3.1, IP
+addresses and reverse DNS, network reset, backups (list, create, restore, delete, automatic-backup
+status), scheduled tasks, host name and product name, statistics (current and history), the account's SSH
+keys, and read-only renewal and credit information (runtime left, the prices the panel quotes, payment
+method, upgrade possible or not, balance). Planned: support tickets and — as the `cost` risk class — the
+paying actions: renewals, upgrades and credit top-ups. Restoring single files from a backup is not covered.
+Issues and pull requests are welcome on the primary repository.
 
 ## How it works
 
