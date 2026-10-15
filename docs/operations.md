@@ -50,5 +50,7 @@ API) instead of guessing. To repair:
 
 1. Update `CHANGELOG.md` and the version in `pyproject.toml`, `src/cbrm/__init__.py` and `flake.nix`.
 2. `nix build` (runs the tests), commit, tag `vX.Y.Z` on the primary.
-3. Build and upload to PyPI: `nix shell nixpkgs#python3Packages.build nixpkgs#twine -c sh -c 'python -m build && twine upload dist/*'`.
+3. Build from the tag and upload to PyPI: `git archive vX.Y.Z | tar -x -C <empty dir>`, there
+   `nix shell nixpkgs#python3Packages.build -c pyproject-build --outdir ../dist`, then `uv publish ../dist/*` with the
+   upload token in `UV_PUBLISH_TOKEN`. (twine 6.2 refuses the wheel's metadata version 2.5.)
 The mirrors follow the primary automatically.
