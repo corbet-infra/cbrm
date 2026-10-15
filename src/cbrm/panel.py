@@ -19,6 +19,7 @@ POWER_ACTIONS = ("start", "stop", "shutdown", "restart")
 
 
 from .errors import ContractError, PanelError
+from .livewire import Page
 
 
 @dataclass
@@ -64,13 +65,13 @@ class Panel:
 
     def _login(self) -> None:
         self.http.cookies.clear()  # a stale session cookie would shadow the new one
-        form = HTMLParser(self.http.get("/login").text).css_first("form[action$='/login'] input[name=_token]")
-        if form is None:
-            raise PanelError("login form not found")
-        r = self.http.post("/login", data={"_token": form.attributes["value"], "email": self._user,
-                                            "password": self._password})
-        if r.status_code != 302 or "/login" in r.headers.get("location", ""):
-            raise PanelError("login failed")
+        # Since 2026-10-15 the login is a Livewire component (auth.login: email, password, `login`), no plain form.
+        login = Page(self, "/login").component("auth.login").require("login", models=("email", "password"))
+        done = login.call(("login", []), updates={"email": self._user, "password": self._password})
+        redirect = done.effects.get("redirect") or ""
+        if not redirect or "/login" in redirect:
+            notes = "; ".join(done.messages())
+            raise PanelError("login failed" + (f": {notes}" if notes else " (a second factor or a changed login step?)"))
         self._save()
 
     def _get(self, path: str, **kw) -> httpx.Response:
