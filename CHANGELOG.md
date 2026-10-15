@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.4.2 — 2026-10-15
 
+- Login works again: BERO HOST replaced the plain login form with a Livewire component (`auth.login`). cbrm
+  now logs in through that component (fields `email` and `password`, method `login`) and counts the login as
+  done only when the panel redirects away from `/login`. If the component's form changes, nothing is sent and
+  the error is a contract error. 0.4.1 failed every command with "login form not found".
 - cbrm never spends money (decision of 2026-10-13): the planned `cost` risk class is gone, together with
   `confirm_cost` in the library, `--confirm-cost` in the CLI, the HTTP API field and the MCP parameter.
   `feature()` raises `ValueError` for any risk class other than read, secret, change and destroy (it was an
