@@ -31,6 +31,12 @@ which a dry run turns into a description.
 Account-wide features (`account-*`) read `/customer/account` instead of a product page. The VM argument
 only names the account context: the allow-list and the confirmations of `Service` decide which VM may name it, but
 they do not scope the effect. These features are **not limited by the VM allow-list**; they act on the whole account.
+Since 0.5.1 the VM may be left out (`Service._context_vm` picks the first allowed VM, else the lowest number; the
+placeholder is `account`, also accepted as the confirmation).
+
+A VM's own membership of an internal network is a VM-scoped feature group (`features/vm_network.py`): the product
+page's `internal-network` component (`disconnect`, `saveAddress` with model `address`, and for an unconnected VM a
+selection bound to `selectedNetworkId` plus one `connect…` method found in the rendering). The allow-list applies.
 
 Other account-level pages are read through `site_page` (`/customer/network`, `/customer/support/ticket`,
 `/customer/accounting`):

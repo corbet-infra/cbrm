@@ -54,7 +54,7 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `templates` | read | – | Operating systems the panel can install: name -> template id |
 | `root-password` | secret | – | The root password as the panel shows it |
 | `account-network-create` | change | `--title` `--description`? | Create an internal network (account-wide, not limited by the VM allow-list; free). The panel assigns the subnet itself, at most a few networks per account (see `account-networks`) |
-| `account-network-edit` | change | `--network` `--title`? `--description`? | Change an internal network's title and/or description (account-wide, not limited by the VM allow-list; what you leave out stays as it is) |
+| `account-network-edit` | change | `--network` `--title`? `--description`? | Change an internal network's title and/or description (account-wide, not limited by the VM allow-list; what you leave out stays as it is; an empty description clears it) |
 | `account-network-server-add` | change | `--network` `--server` | Add a server of the account to an internal network (account-wide, not limited by the VM allow-list; free). Only servers the panel offers for that network can be added |
 | `account-network-server-remove` | change | `--network` `--server` | Remove a server from an internal network (account-wide, not limited by the VM allow-list). The server loses its internal address; the panel assigns one again when it is added back |
 | `account-ssh-key-delete` | change | `--key` | Delete an SSH key from the panel account (account-wide, not limited by the VM allow-list; servers already installed keep it) |
@@ -70,6 +70,9 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `iso-add` | change | `--url` `--title` | Add your own ISO to the account from a public download URL (kept at least 6 months) |
 | `iso-mount` | change | `--drive` `--iso` | Insert an ISO (id, title or file name from `isos`) into a CD drive |
 | `iso-unmount` | change | `--drive` | Remove the ISO from a CD drive |
+| `network-address-set` | change | `--address` | Change the VM's internal IP in its internal network (any free address of the subnet, not the network or broadcast address). The panel only records it: the guest's NIC is configured by you |
+| `network-connect` | change | `--network` | Connect the VM to an internal network (free; the panel assigns the VM's address in the subnet, change it with `network-address-set`). The VM must not be connected yet: disconnect it first to move it. The guest's second NIC appears about a minute later and is not configured by the panel |
+| `network-disconnect` | change | – | Disconnect the VM from its internal network. The VM loses its internal address (a new connection gets one assigned again); traffic over the second NIC stops |
 | `power` | change | `--action` | Start, stop (hard), shut down (ACPI) or restart the VM |
 | `rdns-set` | change | `--address` `--name` | Set the reverse DNS name of one of the VM's IP addresses (see `addresses`) |
 | `rename` | change | `--name` | Rename the product in the panel (its display name, not the host name) |
@@ -104,8 +107,9 @@ other request that changes or submits something. A dry run of a `secret` feature
 Features named `account-*` act on the **whole account** (stored SSH keys, credit, support tickets, internal networks,
 firewalls, bookkeeping lists), not on one server, and are
 **not limited by the VM allow-list** (`CBRM_VMS`): the allow-list only decides which `<vm>` may *name* the
-account context. They still take `<vm>`: it must belong to the account, must be on the allow-list and is
-repeated as `--confirm <vm>` like for every other change. One allowed VM is therefore enough to add or delete
+account context. The VM is optional for them (since 0.5.1): left out, cbrm uses the first allowed VM (else the
+lowest VM number) as the context, and the confirmation is `--confirm account`. Naming a VM still works as before:
+it must belong to the account, must be on the allow-list and is repeated as `--confirm <vm>` like for every other change. One allowed VM is therefore enough to add or delete
 a stored key of the whole account, including keys that a later reinstall of a server outside the allow-list
 would bake in; it is also enough to open or close support tickets and to change the account's private networks. If you give a team or an assistant an allow-list, think of `account-*` as account access.
 

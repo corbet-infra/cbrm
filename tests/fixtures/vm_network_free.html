@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="csrf-token" content="TESTTOKEN">
+<title>Test-Server #9001</title></head>
+<body data-update-uri="https://panel.example.test/livewire/update">
+<div data-update-uri="https://panel.example.test/livewire/update">
+<div wire:key="lw-1-2-1" wire:snapshot="{&quot;data&quot;: {&quot;rootserverId&quot;: 9001, &quot;selectedNetworkId&quot;: &quot;&quot;, &quot;address&quot;: &quot;&quot;, &quot;guideSystem&quot;: &quot;netplan&quot;}, &quot;memo&quot;: {&quot;id&quot;: &quot;AbCdEfGhIjKlMnOpQrSt&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.internal-network&quot;, &quot;path&quot;: &quot;customer/products/4&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;children&quot;: [], &quot;errors&quot;: []}, &quot;checksum&quot;: &quot;x&quot;}" wire:effects="[]" wire:id="AbCdEfGhIjKlMnOpQrSt" wire:name="customerarea.products.rootserver.internal-network" class="rs-net-card">
+    <div class="rs-net-head"><h3>Interne Netzwerke</h3></div>
+    <div class="ncd-card">
+        <select class="form-select" wire:model="selectedNetworkId">
+            <option value="">Netzwerk wählen</option>
+            <option value="7">backbone (10.0.1.0/24)</option>
+            <option value="8">spare (10.0.2.0/24)</option>
+        </select>
+        <button type="button" class="ncd-action" wire:click="connect" wire:loading.attr="disabled">Verbinden</button>
+    </div>
+</div>
+</div></body></html>

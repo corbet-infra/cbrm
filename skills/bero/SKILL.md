@@ -41,6 +41,7 @@ noVNC). Prefer the MCP tools (`bero_*`, one per feature); the CLI `cbrm <feature
 |---|---|
 | Ask BERO something | `bero_account_tickets` (is there an open one?) → `bero_account_ticket_create(subject, text, product=vm, confirm=vm)` → later `bero_account_ticket(ticket)` for the answer |
 | Private network between servers | `bero_account_networks` → `bero_account_network_create(title, confirm=vm)` → `bero_account_network_server_add(network, server, confirm=vm)` for each server |
+| Move a server into / out of a network, change its internal IP | `bero_account_networks` → `bero_network_connect(network, confirm=vm)` / `bero_network_disconnect(confirm=vm)` / `bero_network_address_set(address, confirm=vm)`; these act on one VM (the allow-list applies), the panel only records the IP, the guest's NIC is configured separately |
 | Is the server up? | `bero_status` → `bero_console` (login prompt? kernel panic? waiting for a disk key?) |
 | What happened to it? | `bero_logs`: reinstalls, restarts, starts (panel time, Europe/Berlin) |
 | Hung server | `bero_console` → `bero_power(action="restart", confirm=vm)` → `bero_console` |

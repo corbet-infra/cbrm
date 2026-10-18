@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="csrf-token" content="TESTTOKEN">
+<title>Test-Server #9001</title></head>
+<body data-update-uri="https://panel.example.test/livewire/update">
+<div data-update-uri="https://panel.example.test/livewire/update">
+<div wire:key="lw-1-2-1" wire:snapshot="{&quot;data&quot;: {&quot;rootserverId&quot;: 9001, &quot;selectedNetworkId&quot;: &quot;&quot;, &quot;address&quot;: &quot;10.0.1.10&quot;, &quot;guideSystem&quot;: &quot;netplan&quot;}, &quot;memo&quot;: {&quot;id&quot;: &quot;AbCdEfGhIjKlMnOpQrSt&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.internal-network&quot;, &quot;path&quot;: &quot;customer/products/4&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;children&quot;: [], &quot;errors&quot;: []}, &quot;checksum&quot;: &quot;x&quot;}" wire:effects="[]" wire:id="AbCdEfGhIjKlMnOpQrSt" wire:name="customerarea.products.rootserver.internal-network" class="rs-net-card">
+    <div class="rs-net-head"><h3>Interne Netzwerke</h3><a class="ncd-action" href="https://panel.example.test/customer/network">Verwalten</a></div>
+    <div x-data="{ panel: null }">
+        <div class="ncd-card ncd-card-active">
+            <div class="flex-grow-1">
+                <span class="rs-net-label mb-1">Netzwerk</span>
+                <div class="ncd-name">backbone</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="ncd-pill font-monospace" title="Subnetz">10.0.1.0/24</span>
+                    <span class="ncd-pill font-monospace" title="Netzmaske">Netzmaske: 255.255.255.0</span>
+                    <span class="ncd-pill ncd-pill-active font-monospace" title="Interne IP"><i class="fa-solid fa-location-dot"></i> 10.0.1.10
+                    </span>
+                </div>
+            </div>
+            <div class="ncd-actions">
+                <button type="button" class="ncd-action" x-on:click="panel = 'address'">Interne IP</button>
+                <button type="button" class="ncd-action ncd-action-danger" wire:click="disconnect" wire:confirm="Wirklich trennen?" wire:loading.attr="disabled">Trennen</button>
+            </div>
+        </div>
+        <form wire:submit="saveAddress" class="rs-net-panel" x-show="panel === 'address'" x-cloak="">
+            <label class="rs-net-label" for="internalAddress">Interne IP</label>
+            <input type="text" class="form-control font-monospace" id="internalAddress" wire:model="address" maxlength="15" placeholder="10.0.1.1">
+            <button class="btn default-button" type="submit" wire:target="saveAddress">IP ändern</button>
+        </form>
+        <div wire:key="internal-network-guide-7-10.0.1.10" x-data="{ open: false }"><button type="button">Anleitung zum Einrichten</button></div>
+    </div>
+</div>
+</div></body></html>
