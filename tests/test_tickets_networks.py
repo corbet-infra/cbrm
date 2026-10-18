@@ -344,6 +344,28 @@ def test_network_edit_same_values_verifies(svc):
     assert out["verified"] is True
 
 
+def test_network_edit_can_clear_the_description(svc):
+    wire = svc.panel.http.wire
+    wire.on["startEdit"] = lambda d, p: d.update(editingId=p[0], editTitle="backbone", editDescription="old text")
+    svc.run("account-network-edit", "1", {"network": "7", "description": ""}, confirm="1")
+    assert wire.log[1] == ({"editTitle": "backbone", "editDescription": ""}, [("saveEdit", [])])
+
+
+def test_account_features_need_no_vm(svc):
+    assert svc.run("account-networks", None)["used"] == 2
+    assert svc.run("account-networks", "account")["used"] == 2
+    wire = svc.panel.http.wire
+    wire.on["startEdit"] = lambda d, p: d.update(editingId=p[0], editTitle="backbone", editDescription="x")
+    svc.run("account-network-edit", None, {"network": "7", "title": "core"}, confirm="account")
+    assert len(wire.log) == 2
+    with pytest.raises(ServiceError, match="confirm"):
+        svc.run("account-network-edit", None, {"network": "7", "title": "core"}, confirm="2")
+    with pytest.raises(ServiceError, match="required"):
+        svc.run("status", None)  # VM features still need their VM
+    assert svc.run("account-networks", "1")["used"] == 2  # the old invocation keeps working
+    assert svc.run("account-network-edit", "1", {"network": "7", "title": "core"}, confirm="1")
+
+
 def test_network_edit_refuses_wrong_input_and_wrong_network(svc):
     for args in ({"network": "7"}, {"network": "7", "title": "x" * 256}, {"network": "99", "title": "x"},
                  {"network": "7", "description": "y" * 2001}, {"network": "7;x", "title": "x"}):

@@ -11,6 +11,9 @@ from .features import REGISTRY, Ctx, Feature
 from .panel import Panel
 
 
+ACCOUNT = "account"  # stands for "no particular VM" in account-wide features
+
+
 class Service:
     """Use this, not `Panel`, from code: Panel is the raw transport and applies none of the rules.
     An empty allow-list (CBRM_VMS unset) means every VM of the account. The allow-list names the VMs a caller may
@@ -49,6 +52,9 @@ class Service:
         out = {}
         for p in f.params:
             v = args.get(p.name, p.default)
+            if p.allow_empty and v == "" and not p.multiple:
+                out[p.name] = ""
+                continue
             if v is None or v == "" or v == ():
                 if p.required:
                     raise ServiceError(f"{f.name}: {p.name} is required")
@@ -64,15 +70,32 @@ class Service:
             out[p.name] = v
         return out
 
+    def _context_vm(self, f: Feature, vm: str | None) -> str:
+        """Account-wide features (`account-*`) need no VM: omitted, or the placeholder `account`, they use the
+        first allowed VM (else the lowest VM number) as the account context. Naming a VM keeps working."""
+        if not f.name.startswith("account-") or vm not in (None, "", ACCOUNT):
+            if not vm:
+                raise ServiceError(f"{f.name}: a VM is required")
+            return vm
+        if self.allow:
+            return self.allow[0]
+        products = sorted(self.panel.products(), key=lambda v: (len(v), v))
+        if not products:
+            raise ServiceError("the account has no VM to use as context")
+        return products[0]
+
     def _gate(self, f: Feature, vm: str, confirm, confirm_destroy) -> None:
         if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")
-        if f.risk in ("secret", "change", "destroy") and confirm != vm:
-            raise ServiceError(f"{f.name} ({f.risk}) acts on VM {vm}: repeat it as confirm={vm}")
-        if f.risk == "destroy" and confirm_destroy != vm:
+        # an account-wide feature may also be confirmed as `account`, since it needs no VM
+        ok = {vm, ACCOUNT} if f.name.startswith("account-") else {vm}
+        if f.risk in ("secret", "change", "destroy") and confirm not in ok:
+            raise ServiceError(f"{f.name} ({f.risk}) acts on VM {vm}: repeat it as confirm={vm}"
+                               + (f" (or confirm={ACCOUNT})" if len(ok) > 1 else ""))
+        if f.risk == "destroy" and confirm_destroy not in ok:
             raise ServiceError(f"{f.name} destroys data on VM {vm}: also repeat it as confirm_destroy={vm}")
 
-    def run(self, name: str, vm: str, args: dict | None = None, *, confirm: str | None = None,
+    def run(self, name: str, vm: str | None, args: dict | None = None, *, confirm: str | None = None,
             confirm_destroy: str | None = None, dry_run: bool = False):
         """Run a feature. Returns its result (bytes for PNG features). Changing features return a dict with
         `result` and `verified`:
@@ -85,6 +108,7 @@ class Service:
         None is never turned into False: "could not tell" and "does not show it" are different answers.
         A dry run makes only reading requests and returns {"dry_run": True, "would": ...}."""
         f = self._feature(name)
+        vm = self._context_vm(f, vm)
         a = self._args(f, args or {})
         if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")

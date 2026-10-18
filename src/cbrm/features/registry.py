@@ -36,6 +36,7 @@ class Param:
     multiple: bool = False
     secret: bool = False
     default: Any = None
+    allow_empty: bool = False  # an empty string is a real value (e.g. clearing a description), not 'not given'
 
 
 @dataclass(frozen=True)

@@ -24,7 +24,10 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
     for f in REGISTRY.values():
         s = sub.add_parser(f.name, help=f"[{f.risk}] {f.help}".replace("%", "%%"))  # argparse formats help
-        s.add_argument("vm")
+        if f.name.startswith("account-"):  # account-wide: no VM needed (a VM still works, as before)
+            s.add_argument("vm", nargs="?", default="account", help="optional; the account context (default: the first allowed VM)")
+        else:
+            s.add_argument("vm")
         for prm in f.params:
             opt = "--" + prm.name.replace("_", "-")
             kw = {"help": prm.help.replace("%", "%%"), "dest": prm.name, "type": prm.type}
@@ -36,10 +39,10 @@ def _parser() -> argparse.ArgumentParser:
         if f.returns == "png":
             s.add_argument("--out", required=True, help="PNG file to write")
         if f.risk != "read":
-            s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM")
+            s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM" + (" (or `account`)" if f.name.startswith("account-") else ""))
             s.add_argument("--dry-run", action="store_true", help="read and check everything, change nothing, show the request")
         if f.risk == "destroy":
-            s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased")
+            s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased" + (" (or `account`)" if f.name.startswith("account-") else ""))
     return p
 
 

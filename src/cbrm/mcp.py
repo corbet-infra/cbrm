@@ -38,7 +38,8 @@ def b():
 
 def _tool(f: Feature):
     P = inspect.Parameter
-    params = [P("vm", P.KEYWORD_ONLY, annotation=str)]
+    account = f.name.startswith("account-")  # account-wide: the VM is optional (any VM names the account context)
+    params = [P("vm", P.KEYWORD_ONLY, annotation=str | None, default=None) if account else P("vm", P.KEYWORD_ONLY, annotation=str)]
     for p in f.params:
         ann = list[p.type] if p.multiple else p.type
         params.append(P(p.name, P.KEYWORD_ONLY, annotation=ann) if p.required
@@ -51,7 +52,7 @@ def _tool(f: Feature):
         params.append(P("dry_run", P.KEYWORD_ONLY, annotation=bool, default=False))
 
     async def tool(**kw):
-        vm = kw.pop("vm")
+        vm = kw.pop("vm") or "account"
         opts = {k: kw.pop(k) for k in ("confirm", "confirm_destroy", "dry_run") if k in kw}
         args = {k: v for k, v in kw.items() if v is not None}
         try:  # in a worker thread: panel and console calls block, the server must keep answering

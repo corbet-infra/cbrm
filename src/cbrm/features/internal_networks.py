@@ -226,10 +226,10 @@ def _verify_edit(ctx, vm, result, network, title=None, description=None):
 
 @feature("account-network-edit", "change",
          "Change an internal network's title and/or description (account-wide, not limited by the VM allow-list; "
-         "what you leave out stays as it is)",
+         "what you leave out stays as it is; an empty description clears it)",
          (Param("network", "the network's id from `account-networks`"),
           Param("title", "the new title, at most 255 characters", required=False),
-          Param("description", "the new description, at most 2000 characters", required=False)),
+          Param("description", "the new description, at most 2000 characters; empty (\"\") clears it", required=False, allow_empty=True)),
          verify=_verify_edit, check=_check_edit)
 def _account_network_edit(ctx, vm, network, title=None, description=None):
     nid = _network_id(network)
