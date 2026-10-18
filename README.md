@@ -27,7 +27,15 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | Feature | Risk | Arguments | What it does |
 |---|---|---|---|
 | `account-credit` | read | – | The account's credit balance as the panel shows it (account-wide) |
+| `account-firewall` | read | `--firewall` | One firewall (account-wide): name, default policy per direction (ACCEPT or DROP), the rules as the panel stores them, and the account's servers with whether each uses this firewall |
+| `account-firewalls` | read | – | Firewalls of the account (account-wide): id, name, the servers each is assigned to, how many the account may have, and the templates the panel offers for a new one |
+| `account-invoices` | read | `--search`? `--page`? | Invoices of the account (account-wide): number, amount, date; newest first |
+| `account-networks` | read | – | Internal networks of the account (account-wide): id, title, description, subnet (assigned by the panel), servers with their internal address, and how many networks the account may have |
+| `account-orders` | read | `--search`? `--page`? | Orders of the account (account-wide): product, type, date, status as the panel shows it |
 | `account-ssh-keys` | read | – | SSH keys stored in the panel account (account-wide): id, name, MD5 fingerprint |
+| `account-ticket` | read | `--ticket` | One support ticket with its whole thread (account-wide): subject, status open/closed, who handles it, every message with sender (customer/support/system), date and attachment links |
+| `account-tickets` | read | `--search`? `--page`? | Support tickets of the account (account-wide): id, subject, date, status (as the panel labels it); newest first, with an optional search and page number |
+| `account-transactions` | read | `--search`? `--page`? | Credit transactions of the account (account-wide): description, amount (negative = spent), date, status |
 | `addresses` | read | – | The VM's IPv4/IPv6 addresses with prefix length, gateway and reverse DNS entry |
 | `automatic-backup-status` | read | – | Whether the automatic backup is enabled, and its last and next run (panel time) |
 | `backups` | read | – | The VM's backups (id, title, size, date; panel time) and how many backup slots are free |
@@ -45,8 +53,15 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `tasks` | read | – | The VM's scheduled tasks: id, action, repeat interval and next run (panel time) |
 | `templates` | read | – | Operating systems the panel can install: name -> template id |
 | `root-password` | secret | – | The root password as the panel shows it |
+| `account-network-create` | change | `--title` `--description`? | Create an internal network (account-wide, not limited by the VM allow-list; free). The panel assigns the subnet itself, at most a few networks per account (see `account-networks`) |
+| `account-network-edit` | change | `--network` `--title`? `--description`? | Change an internal network's title and/or description (account-wide, not limited by the VM allow-list; what you leave out stays as it is) |
+| `account-network-server-add` | change | `--network` `--server` | Add a server of the account to an internal network (account-wide, not limited by the VM allow-list; free). Only servers the panel offers for that network can be added |
+| `account-network-server-remove` | change | `--network` `--server` | Remove a server from an internal network (account-wide, not limited by the VM allow-list). The server loses its internal address; the panel assigns one again when it is added back |
 | `account-ssh-key-delete` | change | `--key` | Delete an SSH key from the panel account (account-wide, not limited by the VM allow-list; servers already installed keep it) |
 | `account-ssh-key-import` | change | `--name` `--public-key` | Store a public SSH key in the panel account (account-wide, not limited by the VM allow-list; it can then be baked into a reinstall) |
+| `account-ticket-close` | change | `--ticket` | Close a support ticket as solved (the panel's 'Mein Anliegen ist gelöst'; account-wide, not limited by the VM allow-list). A closed ticket CANNOT be reopened: further questions need a new ticket |
+| `account-ticket-create` | change | `--subject` `--text` `--product`? `--attach …`? | Open a support ticket (account-wide, not limited by the VM allow-list), optionally linked to a product of the account (a VM number as in `status`) and with attachments (files inside the directory named by CBRM_ATTACH_DIR). BERO staff read it: write it as a person would |
+| `account-ticket-reply` | change | `--ticket` `--text` `--attach …`? | Reply to an open support ticket (account-wide, not limited by the VM allow-list), optionally with attachments (files inside the directory named by CBRM_ATTACH_DIR) |
 | `backup-create` | change | `--title` | Create a backup now (the panel makes it in the background; needs a free slot, see `backups`) |
 | `boot-order-set` | change | `--order …` | Set the boot order: every device key from `boot-order`, first boots first |
 | `console-input` | change | `--text`? `--keys …`? `--repeat`? `--interval`? | Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); repeat the keys to catch a boot menu |
@@ -62,6 +77,7 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `rescue-enable` | change | `--image` | Boot the next time into a rescue image (id or title from `rescue`) |
 | `set-root-password` | change | `--password`? | Set the root password (generated if omitted); returns it |
 | `task-delete` | change | `--task` | Delete a scheduled task (deleting the weekly backup task switches the automatic backup off) |
+| `account-network-delete` | destroy | `--network` | Delete an internal network (account-wide, not limited by the VM allow-list). Only a network the panel offers a delete button for (one without servers); the subnet is gone and may be assigned to another network |
 | `backup-delete` | destroy | `--backup` | Delete a backup. THE BACKUP IS GONE |
 | `backup-restore` | destroy | `--backup` `--live`? | Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state |
 | `network-reset` | destroy | – | Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): everything you configured there is lost |
@@ -85,12 +101,13 @@ Every changing command takes `--dry-run`: cbrm reads the panel (it may refresh o
 changes nothing), checks everything, and shows the exact request it would send — without sending it or any
 other request that changes or submits something. A dry run of a `secret` feature reveals nothing.
 
-Features named `account-*` act on the **whole account** (stored SSH keys, credit), not on one server, and are
+Features named `account-*` act on the **whole account** (stored SSH keys, credit, support tickets, internal networks,
+firewalls, bookkeeping lists), not on one server, and are
 **not limited by the VM allow-list** (`CBRM_VMS`): the allow-list only decides which `<vm>` may *name* the
 account context. They still take `<vm>`: it must belong to the account, must be on the allow-list and is
 repeated as `--confirm <vm>` like for every other change. One allowed VM is therefore enough to add or delete
 a stored key of the whole account, including keys that a later reinstall of a server outside the allow-list
-would bake in. If you give a team or an assistant an allow-list, think of `account-*` as account access.
+would bake in; it is also enough to open or close support tickets and to change the account's private networks. If you give a team or an assistant an allow-list, think of `account-*` as account access.
 
 ### When BERO changes the panel
 
@@ -118,7 +135,8 @@ Python 3.11 or newer. Dependencies: httpx, selectolax, websockets, vncdotool, Pi
 |---|---|
 | `CBRM_USER`, `CBRM_PASSWORD` | the panel login |
 | `CBRM_CREDENTIALS_CMD` | instead: a command that prints the user and the password on two lines (`pass`, `sops`, a vault CLI, …) |
-| `CBRM_VMS` | allow-list, e.g. `"10001 10002"`: every other server is refused. Unset means every server of the account. It does **not** limit the `account-*` features (stored SSH keys, credit): they act on the whole account |
+| `CBRM_VMS` | allow-list, e.g. `"10001 10002"`: every other server is refused. Unset means every server of the account. It does **not** limit the `account-*` features (stored SSH keys, credit, tickets, networks): they act on the whole account |
+| `CBRM_ATTACH_DIR` | the only directory ticket attachments are read from (`--attach <file>` is relative to it). Unset means no attachments: an assistant cannot make cbrm send other files out |
 | `CBRM_API_URL`, `CBRM_API_TOKEN` | use a running `cbrm serve` instead of logging in yourself |
 | `XDG_STATE_HOME` | where the session cookie and `audit.log` live (`$XDG_STATE_HOME/cbrm`, mode 0700) |
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+New account-wide features (named `account-*`, not limited by the VM allow-list), all with a `doctor` check:
+
+- Support tickets: `account-tickets` (search, pages), `account-ticket` (the whole thread), `account-ticket-create`
+  (optionally linked to a VM, with attachments), `account-ticket-reply`, `account-ticket-close` (a closed ticket
+  cannot be reopened). Attachments are read only from the directory named by `CBRM_ATTACH_DIR`.
+- Internal networks: `account-networks` (id, title, description, subnet, servers, limit), `account-network-create`,
+  `account-network-edit` (title, description), `account-network-server-add`, `account-network-server-remove`,
+  and `account-network-delete` (destroy class: needs `confirm_destroy`). The add and delete methods are discovered in
+  the network's rendering, because the panel shows those buttons only while they apply.
+- Firewalls, read only: `account-firewalls` (list, limit, templates) and `account-firewall` (policies, rules, servers).
+- Bookkeeping, read only: `account-invoices`, `account-orders`, `account-transactions` (search, pages).
+
 ## 0.4.2 — 2026-10-15
 
 - Login works again: BERO HOST replaced the plain login form with a Livewire component (`auth.login`). cbrm

@@ -32,6 +32,16 @@ Account-wide features (`account-*`) read `/customer/account` instead of a produc
 only names the account context: the allow-list and the confirmations of `Service` decide which VM may name it, but
 they do not scope the effect. These features are **not limited by the VM allow-list**; they act on the whole account.
 
+Other account-level pages are read through `site_page` (`/customer/network`, `/customer/support/ticket`,
+`/customer/accounting`):
+
+| Feature group | Panel mechanism | cbrm |
+|---|---|---|
+| Tickets | `customerarea.support.tickets.overview` (Livewire: `searchTickets`, `paginators.ticketsPage`); the thread is a server-rendered page; open, reply and close are plain forms / a link (`POST /customer/support/ticket/neu`, `POST …/antworten/<id>`, `GET …/changestatus/<id>`) | list through the component, thread parsed from the page, forms posted with the page's own token; attachments only from `CBRM_ATTACH_DIR` |
+| Internal networks | `customerarea.network.internal-networks` (`create`, `startEdit`+`saveEdit`, `removeServer`, a server selection `serverToAdd.<id>` with an add button, a delete button) | the add and delete methods are found in the network's own block (the panel renders them only while they apply), never assumed; the id in the button must be the network's |
+| Firewalls | `customerarea.network.firewalls` list and the editor page `/customer/network/firewall/<id>` | read only |
+| Bookkeeping | `customerarea.accounting.{invoices,orders,transactions}-table` | read only; search and page through the component's own state |
+
 Interfaces report a contract error distinctly: CLI "the panel changed, nothing was sent", HTTP 409,
 an MCP tool error with the same text.
 
