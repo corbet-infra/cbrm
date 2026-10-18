@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;searchTickets&quot;: &quot;&quot;, &quot;paginators&quot;: [{&quot;ticketsPage&quot;: 1}, {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.support.tickets.overview&quot;, &quot;path&quot;: &quot;customer/support/ticket&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.support.tickets.overview">
+<input wire:model.live="searchTickets" type="text">
+<div class="grey-transparent-background mt-2 mb-2"><div class="d-flex p-3">
+<p><b class="d-xl-none">Status: </b><i data-bs-toggle="tooltip" data-bs-title="Offen" class="fa-solid fa-circle text-danger"></i></p>
+<p><b class="d-xl-none">Ticket-ID: </b><span class="text-white">#3002</span></p>
+<p><b class="d-xl-none">Betreff: </b><a href="https://bero-host.de/customer/support/ticket/view/3002" title="Auf Network question antworten">Network question
+ </a></p>
+<p><b class="d-xl-none">Datum: </b>19.10.2026 | 00:00 Uhr</p></div></div><div class="grey-transparent-background mt-2 mb-2"><div class="d-flex p-3">
+<p><b class="d-xl-none">Status: </b><i data-bs-toggle="tooltip" data-bs-title="Geschlossen" class="fa-solid fa-circle text-success"></i></p>
+<p><b class="d-xl-none">Ticket-ID: </b><span class="text-white">#3001</span></p>
+<p><b class="d-xl-none">Betreff: </b><a href="https://bero-host.de/customer/support/ticket/view/3001" title="Auf Earlier question antworten">Earlier question
+ </a></p>
+<p><b class="d-xl-none">Datum: </b>07.10.2026 | 12:52 Uhr</p></div></div>
+</div>
+<form action="https://bero-host.de/customer/support/ticket/neu" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="_token" value="FORMTOKEN">
+<select id="service" name="service"><option value="null">Kein Produkt verknüpfen</option>
+<optgroup label="KVM Rootserver"><option value="5001">KVM Server: #9001 (node-1)</option><option value="5002">KVM Server: #9002 (node-2)</option></optgroup></select>
+<input type="text" id="subject" name="subject" required minlength="5" maxlength="255">
+<textarea name="text" id="text" minlength="10" required></textarea>
+<input type="file" name="anhang[]" multiple></form>
+</body></html>

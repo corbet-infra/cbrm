@@ -14,6 +14,7 @@ import time
 from typing import Callable
 
 import httpx
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from ..errors import ContractError, PanelError, ServiceError
 from ..livewire import Component, Page
@@ -114,6 +115,26 @@ def account_page(ctx, vm: str, fresh: bool = False) -> Page:
     if "@account" not in ctx._pages:
         ctx._pages["@account"] = Page(ctx.panel, "/customer/account")
     return ctx._pages["@account"]
+
+
+def site_page(ctx, vm: str, path: str, fresh: bool = False) -> Page:
+    """Any account-level panel page (`/customer/network`, `/customer/support/ticket`, …) for account-wide features.
+    `vm` names the account context and must belong to it; a Page is loaded once per Ctx unless `fresh`."""
+    if vm not in ctx.panel.products():
+        raise ServiceError(f"VM {vm} is not in this account")
+    key = "@" + path
+    if fresh:
+        ctx._pages.pop(key, None)
+    if key not in ctx._pages:
+        ctx._pages[key] = Page(ctx.panel, path)
+    return ctx._pages[key]
+
+
+def rich_text(node) -> str:
+    """The text of a node with <br> as line breaks, each line trimmed, runs of blank lines collapsed."""
+    html = re.sub(r"<br\s*/?>", "\n", node.html)
+    lines = [l.strip() for l in HTMLParser("<div>" + html + "</div>").text().splitlines()]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
 # -- the panel's JSON endpoints --------------------------------------------------------------------------

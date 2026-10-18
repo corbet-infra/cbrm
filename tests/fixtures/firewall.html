@@ -1,0 +1,10 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;firewallId&quot;: 23, &quot;title&quot;: &quot;node-fw&quot;, &quot;policyIn&quot;: &quot;DROP&quot;, &quot;policyOut&quot;: &quot;ACCEPT&quot;, &quot;rules&quot;: [[[{&quot;protocol&quot;: &quot;tcp&quot;, &quot;port&quot;: &quot;22&quot;}, {&quot;s&quot;: &quot;arr&quot;}]], {&quot;s&quot;: &quot;arr&quot;}], &quot;loadFailed&quot;: false, &quot;lockoutWarningFor&quot;: null}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.network.firewall-editor&quot;, &quot;path&quot;: &quot;customer/network/firewall/23&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.network.firewall-editor">
+<form wire:submit="save"><input wire:model="title" maxlength="100"></form>
+<div wire:key="firewall-server-9001"><div class="fw-bold">node-1.example.test</div><small><span class="bt-pill">nutzt diese Firewall</span></small>
+<button wire:click="unassignServer(9001)">Entfernen</button></div>
+<div wire:key="firewall-server-9003"><div class="fw-bold">node-3.example.test</div><small></small>
+<button wire:click="assignServer(9003)">Zuweisen</button></div>
+</div>
+</body></html>

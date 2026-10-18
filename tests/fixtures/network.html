@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;title&quot;: &quot;&quot;, &quot;template&quot;: &quot;linux&quot;}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.network.firewalls&quot;, &quot;path&quot;: &quot;customer/network&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.network.firewalls">
+<div class="bt-card-head"><h2>Firewalls</h2><span class="bt-chip">1 / 10</span></div>
+<div class="bt-row" wire:key="firewall-23">
+  <div><a class="fw-bold" href="https://bero-host.de/customer/network/firewall/23">node-fw</a>
+  <small class="bt-muted d-block">node-1.example.test, node-2.example.test</small></div>
+  <a href="https://bero-host.de/customer/network/firewall/23">Bearbeiten</a>
+</div>
+<form wire:submit="create"><input id="firewallTitle" wire:model="title" maxlength="100">
+<select id="firewallTemplate" wire:model="template">
+<option value="empty" wire:key="firewall-template-empty">Leer (alles erlaubt)</option>
+<option value="linux" wire:key="firewall-template-linux">Linux (SSH + Ping)</option>
+<option value="webserver" wire:key="firewall-template-webserver">Webserver (SSH, HTTP/HTTPS + Ping)</option></select></form>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;title&quot;: &quot;&quot;, &quot;description&quot;: &quot;&quot;, &quot;editingId&quot;: null, &quot;editTitle&quot;: &quot;&quot;, &quot;editDescription&quot;: &quot;&quot;, &quot;serverToAdd&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.network.internal-networks&quot;, &quot;path&quot;: &quot;customer/network&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:id="fixture" wire:name="customerarea.network.internal-networks">
+<div class="bt-card-head"><h2>Interne Netzwerke</h2><span class="bt-chip">2 / 5</span><span class="bt-chip bt-chip--success">kostenlos</span></div>
+<div class="p-3 mb-3" wire:key="internal-network-7">
+  <div class="d-flex"><div class="text-break"><div class="fw-bold">backbone</div>
+    <div class="bt-chips mt-2"><span class="bt-chip font-monospace">10.0.1.0/24</span><span class="bt-chip">2 Server</span></div><small class="bt-muted d-block mt-1">Private link between the example nodes. Addresses are kept elsewhere.</small></div>
+    <div class="d-flex gap-2"><button class="bt-icon-btn" type="button" wire:click="startEdit(7)" title="Bearbeiten">E</button></div></div>
+  <div class="bt-row" wire:key="internal-network-7-server-9001">
+  <div class="text-break"><div class="fw-bold">node-1.example.test</div><small class="bt-muted font-monospace">10.0.1.10</small></div>
+  <button class="bt-btn-ghost" type="button" wire:click="removeServer(9001)" wire:confirm="node-1.example.test wirklich aus dem Netzwerk entfernen?">Entfernen</button>
+</div><div class="bt-row" wire:key="internal-network-7-server-9002">
+  <div class="text-break"><div class="fw-bold">node-2.example.test</div><small class="bt-muted font-monospace">10.0.1.2</small></div>
+  <button class="bt-btn-ghost" type="button" wire:click="removeServer(9002)" wire:confirm="node-2.example.test wirklich aus dem Netzwerk entfernen?">Entfernen</button>
+</div>
+</div><div class="p-3 mb-3" wire:key="internal-network-8">
+  <div class="d-flex"><div class="text-break"><div class="fw-bold">spare</div>
+    <div class="bt-chips mt-2"><span class="bt-chip font-monospace">10.0.2.0/24</span><span class="bt-chip">0 Server</span></div></div>
+    <div class="d-flex gap-2"><button class="bt-icon-btn" type="button" wire:click="startEdit(8)" title="Bearbeiten">E</button><button class="bt-icon-btn" type="button" wire:click="deleteNetwork(8)" wire:confirm="Wirklich loeschen?">D</button></div></div>
+  <select wire:model="serverToAdd.8"><option value="">-</option><option value="9003">node-3.example.test</option></select><button type="button" wire:click="addServer(8)">Hinzufuegen</button>
+</div>
+<form wire:submit="create">
+  <input type="text" id="internalNetworkTitle" wire:model="title" maxlength="255">
+  <textarea id="internalNetworkDescription" wire:model="description" maxlength="2000"></textarea>
+  <button type="submit">Netzwerk anlegen</button>
+</form>
+</div>
+</body></html>
