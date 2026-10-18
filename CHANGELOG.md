@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-10-19
 
 New account-wide features (named `account-*`, not limited by the VM allow-list), all with a `doctor` check:
 
