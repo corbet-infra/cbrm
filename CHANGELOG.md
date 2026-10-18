@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.1 — 2026-10-19
+
+- Per-VM internal-network changes (class `change`, with `verify` and a `doctor` check), from the product page's
+  "Interne Netzwerke" card: `network-connect` (join a network), `network-disconnect`, and `network-address-set`
+  (change the VM's IP in its network; it must be a usable address of the subnet). The panel only records the IP; the
+  guest's NIC is configured separately. The connect button of an unconnected VM is found in the rendering and
+  nothing is sent unless it is exactly one (that state could not be recorded from the live panel, so its test
+  fixture is synthetic).
+- `account-*` commands no longer need a VM: `cbrm account-networks`, `--confirm account`. Naming a VM, with
+  `--confirm <vm>`, works as before (CLI, HTTP API and MCP).
+- `account-network-edit` can clear a description: pass an empty one (`--description ""`). Parameters may now
+  declare that an empty string is a value (`Param(allow_empty=True)`).
+
 ## 0.5.0 — 2026-10-19
 
 New account-wide features (named `account-*`, not limited by the VM allow-list), all with a `doctor` check:

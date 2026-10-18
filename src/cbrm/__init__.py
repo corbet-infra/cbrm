@@ -4,4 +4,4 @@ from .panel import Panel
 from .console import Console
 
 __all__ = ["Panel", "PanelError", "ContractError", "ServiceError", "Console"]
-__version__ = "0.5.0"
+__version__ = "0.5.1"
