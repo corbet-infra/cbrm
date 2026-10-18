@@ -54,6 +54,7 @@ class Panel:
         self.http = httpx.Client(base_url=BASE, cookies=jar, timeout=60,
                                  headers={"User-Agent": "cbrm (+https://git.corbet.ch/corbet-infra/cbrm)"})
         self._products: dict[str, str] | None = None
+        self._names: dict[str, str] = {}  # VM id -> the product's display name in the panel
 
     # -- session -----------------------------------------------------------------------------
     def _save(self) -> None:
@@ -98,9 +99,12 @@ class Panel:
                 found = {}
                 for pid in sorted(set(re.findall(r"/customer/products/(\d+)", self.page("/customer")))):
                     title = HTMLParser(self.page(f"/customer/products/{pid}")).css_first("title")
-                    m = re.search(r"#(\d+) \(KVM Rootserver #%s\)" % pid, title.text() if title else "")
+                    # "KVM Server: #<vm> (<display name>) | BERO HOST"; the display name is "KVM Rootserver #<pid>" until it is
+                    # renamed in the panel, so the VM is recognised by its number, never by the name
+                    m = re.search(r"KVM[^#|]*#(\d+) \((.+)\)\s*\|", title.text() if title else "")
                     if m:
                         found[m.group(1)] = pid
+                        self._names[m.group(1)] = m.group(2).strip()
                 self._products = found  # published only when complete
             return self._products
 
@@ -113,7 +117,9 @@ class Panel:
     def status(self, vm: str) -> dict[str, str]:
         """Overview fields. `system` is the last template BERO installed, not what is running now."""
         lines = _lines(self._product_page(vm))
-        i = next((k for k, l in enumerate(lines) if l.startswith("KVM Rootserver #")), None)
+        # the overview starts with the product's display name (see products()), followed by the state
+        name = self._names.get(vm, "")
+        i = next((k for k, l in enumerate(lines) if (name and l == name) or l.startswith("KVM Rootserver #")), None)
         if i is None or i + 1 >= len(lines):
             raise ContractError(f"product page of {vm}: no overview")
         out = {"vm": vm, "state": lines[i + 1]}
