@@ -118,7 +118,7 @@ def _verify_connect(ctx, vm, result, network):
     return settle(lambda: (s := _state(_component(ctx, vm, fresh=True)))["connected"] and s["network"] == result["network"])
 
 
-@feature("network-connect", "change",
+@feature("network-connect", "change", "Connect the VM to an internal network",
          "Connect the VM to an internal network (free; the panel assigns the VM's address in the subnet, change it "
          "with `network-address-set`). The VM must not be connected yet: disconnect it first to move it. The guest's "
          "second NIC appears about a minute later and is not configured by the panel",
@@ -151,7 +151,7 @@ def _verify_disconnect(ctx, vm, result):
     return settle(lambda: not _state(_component(ctx, vm, fresh=True))["connected"])
 
 
-@feature("network-disconnect", "change",
+@feature("network-disconnect", "change", "Disconnect the VM from its internal network",
          "Disconnect the VM from its internal network. The VM loses its internal address (a new connection gets one "
          "assigned again); traffic over the second NIC stops",
          verify=_verify_disconnect, check=_check_disconnect)
@@ -176,7 +176,7 @@ def _verify_address(ctx, vm, result, address):
     return settle(lambda: _state(_component(ctx, vm, fresh=True))["address"] == result["address"])
 
 
-@feature("network-address-set", "change",
+@feature("network-address-set", "change", "Change the VM's internal IP address",
          "Change the VM's internal IP in its internal network (any free address of the subnet, not the network or "
          "broadcast address). The panel only records it: the guest's NIC is configured by you",
          (Param("address", "the new IPv4 address, inside the network's subnet"),),
@@ -185,7 +185,7 @@ def _network_address_set(ctx, vm, address):
     try:
         new = ipaddress.IPv4Address(str(address).strip())
     except ValueError:
-        raise ServiceError("address must be an IPv4 address like 10.0.21.1") from None
+        raise ServiceError("address must be an IPv4 address like 10.0.0.5") from None
     comp = _check_address(ctx, vm)
     state = _state(comp)
     if not state["connected"]:

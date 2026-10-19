@@ -89,13 +89,15 @@ def _gone(ctx, vm, backup) -> bool:
 
 # -- reading -----------------------------------------------------------------------------------------
 
-@feature("backups", "read", "The VM's backups (id, title, size, date in panel time, protected: not replaced by scheduled "
+@feature("backups", "read", "List backups and free backup slots",
+         "The VM's backups (id, title, size, date in panel time, protected: not replaced by scheduled "
          "backups) and how many backup slots are free")
 def _backups(ctx, vm):
     return _read(_component(ctx, vm))
 
 
-@feature("automatic-backup-status", "read", "Whether the automatic backup is enabled, and its last and next run (panel time)")
+@feature("automatic-backup-status", "read", "Show the automatic backup's state and schedule",
+         "Whether the automatic backup is enabled, and its last and next run (panel time)")
 def _automatic_backup_status(ctx, vm):
     comp = ctx.product_page(vm).component("automatic-backup-status")
     enabled = value(comp, "autoBackupEnabled")
@@ -125,7 +127,8 @@ def _verify_create(ctx, vm, result, title):
     return settle(appeared)
 
 
-@feature("backup-create", "change", "Create a backup now (the panel makes it in the background; needs a free slot, see `backups`)",
+@feature("backup-create", "change", "Create a backup now",
+         "Create a backup now (the panel makes it in the background; needs a free slot, see `backups`)",
          (Param("title", "the backup's name"),), verify=_verify_create, check=_check_create)
 def _backup_create(ctx, vm, title):
     page = _check_create(ctx, vm)
@@ -148,7 +151,8 @@ def _verify_delete(ctx, vm, result, backup):
 _check_delete = _check("delete/")
 
 
-@feature("backup-delete", "destroy", "Delete a backup. THE BACKUP IS GONE",
+@feature("backup-delete", "destroy", "Delete a backup",
+         "Delete a backup. THE BACKUP IS GONE",
          (Param("backup", "the backup's id from `backups`"),), verify=_verify_delete, check=_check_delete)
 def _backup_delete(ctx, vm, backup):
     _check_delete(ctx, vm)
@@ -166,7 +170,8 @@ def _restore_contract(ctx, vm):
         raise ContractError(f"{page.path}: the panel's restore call no longer takes ?liverestore=")
 
 
-@feature("backup-restore", "destroy", "Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state",
+@feature("backup-restore", "destroy", "Restore the whole VM from a backup",
+         "Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state",
          (Param("backup", "the backup's id from `backups`"),
           Param("live", "yes: the VM starts at once while the data is restored in the background (the panel's "
                         "default); no: it is restored first", choices=("yes", "no"), required=False, default="yes")),

@@ -191,7 +191,7 @@ def test_risk_classes():
     assert {n for n, r in risks.items() if r == "change"} == changing
     assert all(r == "read" for n, r in risks.items() if n not in changing | {"account-network-delete"})
     for name in changing | {"account-network-delete"}:
-        assert "not limited by the VM allow-list" in REGISTRY[name].help
+        assert REGISTRY[name].scope == "account"
 
 
 @pytest.mark.parametrize("name,args", [

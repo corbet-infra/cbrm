@@ -219,7 +219,7 @@ def test_risk_classes():
 def test_cbrm_has_no_way_to_spend_money():
     assert "cost" not in RISKS and {f.risk for f in REGISTRY.values()} <= set(RISKS)
     with pytest.raises(ValueError):
-        feature("pay", "cost", "would spend money")
+        feature("pay", "cost", "Spend money", "would spend money")
 
 
 def test_account_wide_features_are_named_so():

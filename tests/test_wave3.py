@@ -481,7 +481,9 @@ def test_every_command_has_complete_help(capsys):
         out = capsys.readouterr().out
         if name in REGISTRY:
             f = REGISTRY[name]
-            assert f"[{f.risk}]" in out and " ".join(f.help.split()[:4]) in " ".join(out.split()), name
+            assert cli.marker(f) in out and " ".join(f.help.split()[:4]) in " ".join(out.split()), name
+            if f.scope == "account":
+                assert "not limited by the VM allow-list" in " ".join(out.split()), name
             for p in f.params:
                 assert "--" + p.name.replace("_", "-") in out, (name, p.name)
             if f.risk != "read":

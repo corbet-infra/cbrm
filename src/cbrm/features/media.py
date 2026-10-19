@@ -35,7 +35,8 @@ def _live(ctx, vm, name: str, refresh: str):
 
 # -- reading -----------------------------------------------------------------------------------------
 
-@feature("drives", "read", "The VM's CD drives and what is inserted (live state from the hypervisor)")
+@feature("drives", "read", "List the CD drives and what is inserted",
+         "The VM's CD drives and what is inserted (live state from the hypervisor)")
 def _drives(ctx, vm):
     comp = _live(ctx, vm, "drive", "updateDrivesContent")
     out = []
@@ -49,7 +50,8 @@ def _drives(ctx, vm):
     return out
 
 
-@feature("isos", "read", "ISO images the panel can insert (public ones and the account's own), optionally filtered",
+@feature("isos", "read", "List the ISO images the panel can insert",
+         "ISO images the panel can insert (public ones and the account's own), optionally filtered",
          (Param("search", "filter by title or file name", required=False, default=""),))
 def _isos(ctx, vm, search=""):
     comp = ctx.product_page(vm).component("drive")
@@ -68,14 +70,16 @@ def _isos(ctx, vm, search=""):
     return out
 
 
-@feature("rescue", "read", "Rescue system state and the available rescue images")
+@feature("rescue", "read", "Show the rescue system state and images",
+         "Rescue system state and the available rescue images")
 def _rescue(ctx, vm):
     comp = ctx.product_page(vm).component("rescue")
     text = " ".join(comp.tree.text(separator=" ").split())
     return {"active": "Rescue System ist deaktiviert" not in text, "images": _rows(comp, "enableRescue")}
 
 
-@feature("boot-order", "read", "Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network)")
+@feature("boot-order", "read", "Show the boot order",
+         "Boot devices in order (scsi0 = disk, ide0/ide2 = CD drives, net0 = network)")
 def _boot_order(ctx, vm):
     comp = _live(ctx, vm, "boot", "updateBootOrderContent")
     items = [{"key": n.attributes["data-bootkey"], "label": " ".join(n.text(separator=" ").split())}
@@ -112,7 +116,8 @@ def _verify_mount(ctx, vm, result, drive, iso):
     return False
 
 
-@feature("iso-mount", "change", "Insert an ISO (id, title or file name from `isos`) into a CD drive",
+@feature("iso-mount", "change", "Insert an ISO into a CD drive",
+         "Insert an ISO (id, title or file name from `isos`) into a CD drive",
          (Param("drive", "the drive, e.g. ide0"), Param("iso", "id, title or file name")), verify=_verify_mount,
          check=lambda ctx, vm: ctx.product_page(vm).component("drive").require("setCurrentDrive", "mountIso"))
 def _iso_mount(ctx, vm, drive, iso):
@@ -127,7 +132,8 @@ def _iso_mount(ctx, vm, drive, iso):
                         {}, [("setCurrentDrive", [drive]), ("mountIso", [int(found["id"])])]).messages()})
 
 
-@feature("iso-unmount", "change", "Remove the ISO from a CD drive", (Param("drive", "the drive, e.g. ide0"),),
+@feature("iso-unmount", "change", "Remove the ISO from a CD drive",
+         "Remove the ISO from a CD drive", (Param("drive", "the drive, e.g. ide0"),),
          verify=lambda ctx, vm, result, drive: _drive_content(ctx, vm, drive) == "",
          check=lambda ctx, vm: ctx.product_page(vm).component("drive").require("setCurrentDrive", "unmountIso"))
 def _iso_unmount(ctx, vm, drive):
@@ -137,7 +143,8 @@ def _iso_unmount(ctx, vm, drive):
                         {}, [("setCurrentDrive", [drive]), ("unmountIso", [])]).messages()})
 
 
-@feature("iso-add", "change", "Add your own ISO to the account from a public download URL (kept at least 6 months)",
+@feature("iso-add", "change", "Add your own ISO from a public URL",
+         "Add your own ISO to the account from a public download URL (kept at least 6 months)",
          (Param("url", "HTTP(S) URL of the ISO file"), Param("title", "title shown in the panel")),
          check=lambda ctx, vm: ctx.product_page(vm).component("drive").require("displayDownloadForm"))
 def _iso_add(ctx, vm, url, title):
@@ -161,7 +168,8 @@ def _verify_boot(ctx, vm, result, order):
     return [i["key"] for i in _boot_order(ctx, vm)] == list(order)
 
 
-@feature("boot-order-set", "change", "Set the boot order: every device key from `boot-order`, first boots first",
+@feature("boot-order-set", "change", "Set the boot order",
+         "Set the boot order: every device key from `boot-order`, first boots first",
          (Param("order", "device keys in the new order, e.g. ide0 scsi0 net0 ide2", multiple=True),),
          verify=_verify_boot,
          check=lambda ctx, vm: ctx.product_page(vm).require_endpoint(f"/customer/rootserver/{vm}/boot_order"))
@@ -183,7 +191,8 @@ def _rescue_is(want: bool):
     return verify
 
 
-@feature("rescue-enable", "change", "Boot the next time into a rescue image (id or title from `rescue`)",
+@feature("rescue-enable", "change", "Boot into a rescue image next time",
+         "Boot the next time into a rescue image (id or title from `rescue`)",
          (Param("image", "id, title or file name"),), verify=_rescue_is(True),
          check=lambda ctx, vm: ctx.product_page(vm).component("rescue").require("enableRescue"))
 def _rescue_enable(ctx, vm, image):
@@ -196,7 +205,8 @@ def _rescue_enable(ctx, vm, image):
                         {}, [("enableRescue", [int(match[0]["id"])])]).messages()})
 
 
-@feature("rescue-disable", "change", "Leave the rescue system", verify=_rescue_is(False),
+@feature("rescue-disable", "change", "Leave the rescue system",
+         "Leave the rescue system", verify=_rescue_is(False),
          check=lambda ctx, vm: ctx.product_page(vm).component("rescue").require("disableRescue"))
 def _rescue_disable(ctx, vm):
     comp = ctx.product_page(vm).component("rescue").require("disableRescue")
@@ -204,7 +214,8 @@ def _rescue_disable(ctx, vm):
                     lambda: {"messages": comp._send({}, [("disableRescue", [])]).messages()})
 
 
-@feature("drive-delete", "change", "Remove a CD drive from the VM (a VM should have one CD drive, the disk and network)",
+@feature("drive-delete", "change", "Remove a CD drive",
+         "Remove a CD drive from the VM (a VM should have one CD drive, the disk and network)",
          (Param("drive", "the drive, e.g. ide0"),),
          verify=lambda ctx, vm, result, drive: (ctx.fresh(vm), drive not in [d["drive"] for d in _drives(ctx, vm)])[1],
          check=lambda ctx, vm: ctx.product_page(vm).component("drive").require("setCurrentDrive", "deleteDrive"))
@@ -232,7 +243,8 @@ def _verify_drive_add(ctx, vm, result):
     return any(d["drive"] not in result["drives_before"] for d in _drives(ctx, vm))
 
 
-@feature("drive-add", "change", "Add a CD drive to the VM (the panel's 'Weiteres Laufwerk'; the panel picks the slot). "
+@feature("drive-add", "change", "Add a CD drive",
+         "Add a CD drive to the VM (the panel's 'Weiteres Laufwerk'; the panel picks the slot). "
          "A VM should have one CD drive: add one only when it has none, see `drives`",
          verify=_verify_drive_add, check=_check_drive_add)
 def _drive_add(ctx, vm):

@@ -62,7 +62,8 @@ def _state(comp: Component) -> dict:
             "mail_unlock_requestable": requestable and unlocked is None}
 
 
-@feature("firewall", "read", "The server's firewall (id and name, or none) and its mail ports (25, 465, 587, 2525): "
+@feature("firewall", "read", "Show the server's firewall and mail-port state",
+         "The server's firewall (id and name, or none) and its mail ports (25, 465, 587, 2525): "
          "unlocked since when, or locked and whether an unlock can be requested",
          check=lambda ctx, vm: _state(_component(ctx, vm)))
 def _firewall(ctx, vm):
@@ -83,7 +84,7 @@ def _check_unassign(ctx, vm):
     return comp
 
 
-@feature("firewall-unassign", "change",
+@feature("firewall-unassign", "change", "Remove the firewall from the server",
          "Remove the firewall from the server (the panel's 'Entfernen' on the server's card): its rules stop applying to "
          "this server after about a minute; the firewall itself stays for its other servers",
          verify=_verify_unassign, check=_check_unassign)
@@ -132,7 +133,7 @@ def _verify_request(ctx, vm, result, purpose, hostname, accept_terms):
     return settle(lambda: _state(_component(ctx, vm, fresh=True))["mail_ports"]["state"] != result["was"])
 
 
-@feature("mail-unlock-request", "change",
+@feature("mail-unlock-request", "change", "Ask BERO to unlock the mail ports",
          "Ask BERO to unlock the mail ports (25, 465, 587, 2525) of the server (the panel's 'Freischaltung beantragen'). "
          "BERO staff review it and answer in a support ticket: write the purpose as a person would. Only while the "
          "ports are locked and the panel offers the request",

@@ -14,8 +14,8 @@ ACCOUNT = "account"  # stands for "no particular VM" in account-wide features
 
 
 def feature_list() -> list[dict]:
-    """Every feature with its risk class and parameters (what `cbrm features` and `GET /features` show)."""
-    return [{"name": f.name, "risk": f.risk, "help": f.help, "returns": f.returns,
+    """Every feature with its risk class, scope and parameters (what `cbrm features` and `GET /features` show)."""
+    return [{"name": f.name, "risk": f.risk, "scope": f.scope, "summary": f.summary, "help": f.help, "returns": f.returns,
              "params": [{"name": p.name, "help": p.help, "type": p.type.__name__, "required": p.required,
                          "multiple": p.multiple, "choices": list(p.choices), "secret": p.secret} for p in f.params]}
             for f in REGISTRY.values()]
@@ -77,7 +77,7 @@ class Service:
     def _context_vm(self, f: Feature, vm: str | None) -> str:
         """Account-wide features (`account-*`) need no VM: omitted, or the placeholder `account`, they use the
         first allowed VM (else the lowest VM number) as the account context. Naming a VM keeps working."""
-        if not f.name.startswith("account-") or vm not in (None, "", ACCOUNT):
+        if f.scope != "account" or vm not in (None, "", ACCOUNT):
             if not vm:
                 raise ServiceError(f"{f.name}: a VM is required")
             return vm
@@ -92,7 +92,7 @@ class Service:
         if self.allow and vm not in self.allow:
             raise ServiceError(f"VM {vm} is not in the allow-list")
         # an account-wide feature may also be confirmed as `account`, since it needs no VM
-        ok = {vm, ACCOUNT} if f.name.startswith("account-") else {vm}
+        ok = {vm, ACCOUNT} if f.scope == "account" else {vm}
         if f.risk in ("secret", "change", "destroy") and confirm not in ok:
             raise ServiceError(f"{f.name} ({f.risk}) acts on VM {vm}: repeat it as confirm={vm}"
                                + (f" (or confirm={ACCOUNT})" if len(ok) > 1 else ""))

@@ -82,7 +82,8 @@ def _tasks(ctx, vm) -> list[dict]:
     return _read(page.component("task"), _form_options(page)["methode"])
 
 
-@feature("tasks", "read", "The VM's scheduled tasks: id, action, repeat interval, next run (panel time) and the e-mail "
+@feature("tasks", "read", "List the scheduled tasks",
+         "The VM's scheduled tasks: id, action, repeat interval, next run (panel time) and the e-mail "
          "notification (mode none, always or failed_only, and the address if not the account's)")
 def _tasks_feature(ctx, vm):
     return _tasks(ctx, vm)
@@ -109,7 +110,7 @@ def _verify_create(ctx, vm, result, action, interval, start, notification_mode=N
     return result.get("state") == "success" and settle(seen)
 
 
-@feature("task-create", "destroy",
+@feature("task-create", "destroy", "Schedule a repeating action such as a backup",
          "Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, "
          "3-days, 5-days, weekly, 2-weeks, monthly, yearly). DESTROYING: the task acts later and repeatedly without you "
          "until it is deleted (a stop or restart task keeps interrupting the VM, a backup task may rotate or overwrite "
@@ -175,7 +176,8 @@ def _verify_delete(ctx, vm, result, task):
     return result.get("state") == "success" and settle(gone)
 
 
-@feature("task-delete", "change", "Delete a scheduled task (deleting the weekly backup task switches the automatic backup off)",
+@feature("task-delete", "change", "Delete a scheduled task",
+         "Delete a scheduled task (deleting the weekly backup task switches the automatic backup off)",
          (Param("task", "the task's id from `tasks`"),), verify=_verify_delete,
          check=_check_delete)
 def _task_delete(ctx, vm, task):
@@ -221,7 +223,7 @@ def _verify_notification(ctx, vm, result, task, notification_mode, notification_
     return result.get("state") == "success" and settle(seen)
 
 
-@feature("task-notification-set", "change",
+@feature("task-notification-set", "change", "Set a scheduled task's e-mail notification",
          "Set a scheduled task's e-mail notification (the panel's bell on the task): none, always or failed_only, "
          "optionally to another address than the account's",
          (Param("task", "the task's id from `tasks`"),

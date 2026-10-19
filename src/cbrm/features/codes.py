@@ -35,9 +35,9 @@ def _check(ctx, vm):
         _code(_component(ctx, vm, which))
 
 
-@feature("account-codes", "read",
-         "The account's share code and transfer code (account-wide): what others enter to share a product or transfer a "
-         "server to this account; neither reveals the e-mail address, and each share or transfer must be accepted",
+@feature("account-codes", "read", "Show the account's share and transfer codes",
+         "The account's share code and transfer code: what others enter to share a product or transfer a server to this "
+         "account; neither reveals the e-mail address, and each share or transfer must be accepted",
          check=_check)
 def _account_codes(ctx, vm):
     return {f"{which}_code": _code(_component(ctx, vm, which)) for which in CODES}
@@ -55,9 +55,8 @@ def _verify_regenerate(ctx, vm, result, code):
     return settle(lambda: _code(_component(ctx, vm, code, fresh=True)) != result["was"])
 
 
-@feature("account-code-regenerate", "change",
-         "Replace the account's share or transfer code with a new one (account-wide, not limited by the VM allow-list): "
-         "the old code stops working at once",
+@feature("account-code-regenerate", "change", "Replace the share or transfer code with a new one",
+         "Replace the account's share or transfer code with a new one: the old code stops working at once",
          (Param("code", "which code", choices=tuple(CODES)),), verify=_verify_regenerate, check=_check_regenerate)
 def _account_code_regenerate(ctx, vm, code):
     comp = _component(ctx, vm, code)

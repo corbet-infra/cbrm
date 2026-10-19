@@ -19,7 +19,8 @@ def _verify_hostname(ctx, vm, result, hostname):
     return ok(result) and text(require_element(ctx.fresh(vm), "#hostname", "the host name display")) == result["wanted"]
 
 
-@feature("hostname-set", "change", "Set the VM's host name in the panel (lower-cased; letters, digits, hyphens, dots)",
+@feature("hostname-set", "change", "Set the VM's host name",
+         "Set the VM's host name in the panel (lower-cased; letters, digits, hyphens, dots)",
          (Param("hostname", "the new host name, e.g. web1.example.org"),), verify=_verify_hostname,
          check=_check_hostname)
 def _hostname_set(ctx, vm, hostname):
@@ -47,7 +48,8 @@ def _verify_rename(ctx, vm, result, name):
     return ok(result) and text(require_element(ctx.fresh(vm), "#displayname", "the product name display")) == result["wanted"]
 
 
-@feature("rename", "change", "Rename the product in the panel (its display name, not the host name)",
+@feature("rename", "change", "Rename the product in the panel",
+         "Rename the product in the panel (its display name, not the host name)",
          (Param("name", "the new display name"),), verify=_verify_rename, check=_check_rename)
 def _rename(ctx, vm, name):
     page, path = _check_rename(ctx, vm)

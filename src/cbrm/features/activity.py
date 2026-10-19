@@ -37,7 +37,8 @@ def _activity_rows(comp) -> list[dict]:
     return out
 
 
-@feature("activity", "read", "Who did what to the server in the panel, and when (the panel's activity list, newest "
+@feature("activity", "read", "Show who did what to the server in the panel",
+         "Who did what to the server in the panel, and when (the panel's activity list, newest "
          "first, panel time): `you`, or the customer the product is shared with",
          (Param("n", "how many entries (1..200)", int, False, default=20),),
          check=lambda ctx, vm: _activity_rows(ctx.product_page(vm).component("activity-log")))
@@ -60,7 +61,8 @@ def _updates(comp) -> dict:
     return {"pending": pending, "updates": items if pending else []}
 
 
-@feature("updates", "read", "Pending server updates the panel offers to install (`pending` and the list the panel "
+@feature("updates", "read", "Show the pending server updates",
+         "Pending server updates the panel offers to install (`pending` and the list the panel "
          "shows; the panel's own words)",
          check=lambda ctx, vm: _updates(ctx.product_page(vm).component("rootserver.updates")))
 def _updates_feature(ctx, vm):
@@ -78,7 +80,7 @@ def _verify_install(ctx, vm, result):
     return settle(lambda: not _updates(ctx.fresh(vm).component("rootserver.updates"))["pending"])
 
 
-@feature("updates-install", "change",
+@feature("updates-install", "change", "Install the pending server updates",
          "Install the pending server updates (the panel's 'Updates installieren'; read `updates` first: what they do "
          "is the panel's, the server may be restarted). Only while the panel lists pending updates",
          verify=_verify_install, check=_check_install)
@@ -104,7 +106,8 @@ def _running(comp) -> dict:
     return {"running": bool(shown), "text": shown or None}
 
 
-@feature("running-task", "read", "The task the panel is running on the server right now (for example an installation "
+@feature("running-task", "read", "Show the task the panel is running right now",
+         "The task the panel is running on the server right now (for example an installation "
          "or a backup), as the panel's progress notice shows it; `running: false` when there is none",
          check=lambda ctx, vm: _running(ctx.product_page(vm).component("running-task")))
 def _running_task(ctx, vm):

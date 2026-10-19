@@ -70,7 +70,8 @@ def _upgrade(comp) -> dict:
     return {"possible": None, "note": "the panel's upgrade section looks different than cbrm knows; see the panel"}
 
 
-@feature("renewal", "read", "Remaining runtime, automatic renewal (runtimes with the prices the panel quotes, payment method), "
+@feature("renewal", "read", "Show remaining runtime, renewal options and credit",
+         "Remaining runtime, automatic renewal (runtimes with the prices the panel quotes, payment method), "
          "whether the server can be upgraded, and the account credit")
 def _renewal(ctx, vm):
     page = ctx.product_page(vm)
@@ -87,6 +88,7 @@ def _renewal(ctx, vm):
             "upgrade": _upgrade(page.component("product-upgrade")), **_credit(page)}
 
 
-@feature("account-credit", "read", "The account's credit balance as the panel shows it (account-wide)")
+@feature("account-credit", "read", "Show the account's credit balance",
+         "The account's credit balance as the panel shows it")
 def _account_credit(ctx, vm):
     return _credit(account_page(ctx, vm))

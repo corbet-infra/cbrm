@@ -191,7 +191,8 @@ def _check_delete(ctx, vm):
     return comp
 
 
-@feature("account-ssh-keys", "read", "SSH keys stored in the panel account (account-wide): id, name, MD5 fingerprint",
+@feature("account-ssh-keys", "read", "List the SSH keys stored in the account",
+         "SSH keys stored in the panel account: id, name, MD5 fingerprint",
          check=_check_keys)
 def _account_ssh_keys(ctx, vm):
     return _keys(_component(ctx, vm))
@@ -203,9 +204,8 @@ def _verify_import(ctx, vm, result, name, public_key):
                               for k in _keys(_component(ctx, vm, fresh=True))))
 
 
-@feature("account-ssh-key-import", "change",
-         "Store a public SSH key in the panel account (account-wide, not limited by the VM allow-list; it can then be "
-         "baked into a reinstall)",
+@feature("account-ssh-key-import", "change", "Store a public SSH key in the account",
+         "Store a public SSH key in the panel account; it can then be baked into a reinstall",
          (Param("name", "the key's name"), Param("public_key", "one OpenSSH public key line (never a private key)",
                                                  secret=True)),
          verify=_verify_import, check=_check_import)
@@ -233,9 +233,8 @@ def _verify_delete(ctx, vm, result, key):
     return settle(lambda: result["id"] not in [k["id"] for k in _keys(_component(ctx, vm, fresh=True))])
 
 
-@feature("account-ssh-key-delete", "change",
-         "Delete an SSH key from the panel account (account-wide, not limited by the VM allow-list; servers already "
-         "installed keep it)",
+@feature("account-ssh-key-delete", "change", "Delete a stored SSH key from the account",
+         "Delete an SSH key from the panel account; servers already installed keep it",
          (Param("key", "the key's id or name from `account-ssh-keys`"),), verify=_verify_delete, check=_check_delete)
 def _account_ssh_key_delete(ctx, vm, key):
     comp = _check_keys(ctx, vm).require("deleteSshKey")

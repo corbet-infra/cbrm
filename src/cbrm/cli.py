@@ -11,38 +11,55 @@ import httpx
 
 from . import __version__
 from .errors import ContractError, PanelError, ServiceError
-from .features import FILE_TYPES, REGISTRY
+from .features import ACCOUNT_NOTE, FILE_TYPES, REGISTRY
 
-RISK_NOTES = {
-    "read": "Reads only.",
+RISK_NOTES = {  # what each class means and requires (the command reference's table)
+    "read": "Reads only; nothing to confirm.",
     "secret": "Reveals a secret: needs --confirm; audited without the value.",
-    "change": "Changes something: needs --confirm, is audited and checked afterwards where the panel shows the effect; "
+    "change": "Changes something: needs --confirm; audited, and checked afterwards where the panel shows the effect; "
               "--dry-run shows the request without sending it.",
-    "destroy": "Destroys or overwrites data, or acts later and repeatedly without you: needs --confirm and "
-               "--confirm-destroy; --dry-run shows the request without sending it.",
+    "destroy": "Erases or overwrites data, or acts later and repeatedly without you: needs --confirm and "
+               "--confirm-destroy; audited; --dry-run shows the request without sending it.",
+}
+RISK_HELP = {  # what a command's --help adds to its options (which already show --confirm and --dry-run)
+    "read": "",
+    "secret": " Audited without the value.",
+    "change": " Audited, and checked afterwards where the panel shows the effect.",
+    "destroy": " Erases or overwrites data, or acts later and repeatedly without you; audited.",
 }
 
 
+def marker(f) -> str:
+    """The risk class, and the scope when it is the whole account: `[change]`, `[change, account-wide]`."""
+    return f"[{f.risk}, account-wide]" if f.scope == "account" else f"[{f.risk}]"
+
+
 def _parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cbrm", description="BERO HOST management: the panel and the VNC console. "
-                                "`cbrm features` lists every operation with its risk class; `cbrm <feature> --help` "
-                                "shows its arguments.",
+    p = argparse.ArgumentParser(prog="cbrm", description="CLI for the BERO HOST customer panel and its VNC console. "
+                                "`cbrm <command> --help` explains a command.",
                                 epilog="Documentation: https://forge.corbet.ch/corbet-infra/cbrm/wiki")
     p.add_argument("--version", action="version", version=f"cbrm {__version__}")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="<command>", title="commands")
-    sub.add_parser("vms", help="all VMs of the account")
-    sub.add_parser("features", help="every operation with its risk class and arguments")
-    sub.add_parser("doctor", help="check read-only that the panel still offers every feature").add_argument("vm")
-    s = sub.add_parser("serve", help="run the HTTP API (needs CBRM_API_TOKEN)")
+    sub.add_parser("vms", help="List the account's VMs", description="List the account's VMs (within CBRM_VMS): "
+                   "state, host name, addresses, last backup and last installed template.")
+    sub.add_parser("features", help="List every operation with its risk and scope",
+                   description="List every operation with its risk class, scope and summary; with --json also the "
+                   "full help and the parameters. Needs no login.")
+    sub.add_parser("doctor", help="Check read-only that the panel still offers every feature",
+                   description="Check read-only, for every feature, that the panel still offers what it relies on: "
+                   "ok, BROKEN: reason, or untested. Exits with 3 if a feature is broken.").add_argument(
+                   "vm", help="the VM number, as `cbrm vms` lists it")
+    s = sub.add_parser("serve", help="Run the HTTP API (needs CBRM_API_TOKEN)",
+                       description="Run the HTTP API with the same features and rules; every route needs the bearer "
+                       "token in CBRM_API_TOKEN. The OpenAPI schema is at /openapi.json.")
     s.add_argument("--host", default="127.0.0.1", help="address to listen on (default: loopback)")
     s.add_argument("--port", type=int, default=8765, help="port to listen on (default: 8765)")
     for f in REGISTRY.values():
-        s = sub.add_parser(f.name, help=f"[{f.risk}] {f.help}".replace("%", "%%"),  # argparse formats help
-                           description=f"[{f.risk}] {f.help}. {RISK_NOTES[f.risk]}".replace("%", "%%"))
-        if f.name.startswith("account-"):  # account-wide: no VM needed (a VM still works, as before)
-            s.add_argument("vm", nargs="?", default="account", help="optional; the account context (default: the first "
-                           "allowed VM). Account-wide: not limited by the VM allow-list")
+        s = sub.add_parser(f.name, help=f"[{f.risk}] {f.summary}".replace("%", "%%"),  # argparse formats help
+                           description=f"{marker(f)} {f.help}.{RISK_HELP[f.risk]}".replace("%", "%%"))
+        if f.scope == "account":  # no VM needed (a VM still works, as before)
+            s.add_argument("vm", nargs="?", default="account", help=f"{ACCOUNT_NOTE} Default: the first allowed VM")
         else:
             s.add_argument("vm", help="the VM number, as `cbrm vms` lists it")
         for prm in f.params:
@@ -56,10 +73,10 @@ def _parser() -> argparse.ArgumentParser:
         if f.returns in FILE_TYPES:
             s.add_argument("--out", required=True, help=f"{f.returns.upper()} file to write")
         if f.risk != "read":
-            s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM" + (" (or `account`)" if f.name.startswith("account-") else ""))
+            s.add_argument("--confirm", required=True, metavar="VM", help="repeat the target VM" + (" (or `account`)" if f.scope == "account" else ""))
             s.add_argument("--dry-run", action="store_true", help="read and check everything, change nothing, show the request")
         if f.risk == "destroy":
-            s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased" + (" (or `account`)" if f.name.startswith("account-") else ""))
+            s.add_argument("--confirm-destroy", required=True, metavar="VM", help="repeat the target VM again: data is erased" + (" (or `account`)" if f.scope == "account" else ""))
     return p
 
 
@@ -68,9 +85,10 @@ def _features(a, fs: list[dict], out) -> None:
         out(fs)
         return
     width = max((len(f["name"]) for f in fs), default=18)
-    for f in fs:
-        args = " ".join(("--" + p["name"].replace("_", "-")) + ("" if p["required"] else "?") for p in f["params"])
-        print(f"{f['risk']:8} {f['name']:{width}} {args:30} {f['help']}")
+    print(f"{'RISK':8} {'SCOPE':8} {'COMMAND':{width}} SUMMARY")
+    for f in fs:  # an older `cbrm serve` sends no summary and no scope
+        scope = f.get("scope") or ("account" if f["name"].startswith("account-") else "vm")
+        print(f"{f['risk']:8} {scope:8} {f['name']:{width}} {f.get('summary') or f['help']}")
 
 
 def main(argv: list[str] | None = None) -> None:

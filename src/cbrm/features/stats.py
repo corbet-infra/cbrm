@@ -31,7 +31,8 @@ def _check_stats(ctx, vm):
     return page
 
 
-@feature("stats", "read", "Current CPU, RAM and disk use, uptime, ping, traffic and running network/disk counters")
+@feature("stats", "read", "Show current CPU, RAM, disk and network use",
+         "Current CPU, RAM and disk use, uptime, ping, traffic and running network/disk counters")
 def _stats(ctx, vm):
     _check_stats(ctx, vm)
     d = get_json(ctx, f"/customer/rootserver/{vm}/updatestats")
@@ -58,7 +59,8 @@ def _stats(ctx, vm):
     return out
 
 
-@feature("stats-history", "read", "CPU, RAM, disk or network figures over a time frame: min, average, max and last "
+@feature("stats-history", "read", "Show CPU, RAM, disk or network figures over time",
+         "CPU, RAM, disk or network figures over a time frame: min, average, max and last "
          "value per series (cpu and ram in percent, disk in MB/s, network in Mbit/s)",
          (Param("timeframe", "how far back", choices=TIMEFRAMES, required=False, default="hour"),
           Param("metric", "what to show", choices=tuple(METRICS), required=False, default="cpu")))

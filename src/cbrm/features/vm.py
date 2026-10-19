@@ -14,7 +14,8 @@ from .registry import Param, feature
 
 # -- reading -----------------------------------------------------------------------------------------
 
-@feature("status", "read", "State, hostname, addresses, last backup and last installed template")
+@feature("status", "read", "Show state, host name, addresses and last backup",
+         "State, hostname, addresses, last backup and last installed template")
 def _status(ctx, vm):
     return ctx.panel.status(vm)
 
@@ -46,7 +47,8 @@ def _check_logs(ctx, vm):
     return comp
 
 
-@feature("logs", "read", "The panel's action log, newest first, in panel time (Europe/Berlin): date, action and "
+@feature("logs", "read", "Show the panel's action log, newest first",
+         "The panel's action log, newest first, in panel time (Europe/Berlin): date, action and "
          "status (ok, failed); a page of the log, optionally filtered with the panel's own search",
          (Param("n", "how many entries of the page", int, False, default=20),
           Param("search", "only entries matching this text (the panel's own search)", required=False),
@@ -74,24 +76,28 @@ def _check_root_password(ctx, vm):
         raise ContractError("product page: the root password field is gone")
 
 
-@feature("console", "read", "A screenshot of the VNC console (PNG)", returns="png", check=_check_console)
+@feature("console", "read", "Take a screenshot of the VNC console",
+         "A screenshot of the VNC console (PNG)", returns="png", check=_check_console)
 def _console(ctx, vm):
     from ..console import Console
     with Console(*ctx.panel.console_session(vm)) as c:
         return c.png()
 
 
-@feature("templates", "read", "Operating systems the panel can install: name -> template id")
+@feature("templates", "read", "List the operating systems the panel can install",
+         "Operating systems the panel can install: name -> template id")
 def _templates(ctx, vm):
     return ctx.panel.templates(vm)
 
 
-@feature("ssh-keys", "read", "SSH keys stored in the panel account: name -> id")
+@feature("ssh-keys", "read", "List the stored SSH keys by name",
+         "SSH keys stored in the panel account: name -> id")
 def _ssh_keys(ctx, vm):
     return ctx.panel.ssh_keys(vm)
 
 
-@feature("root-password", "secret", "The root password as the panel shows it", secret_result=True,
+@feature("root-password", "secret", "Show the root password",
+         "The root password as the panel shows it", secret_result=True,
          check=_check_root_password)
 def _root_password(ctx, vm):
     return {"vm": vm, "root_password": ctx.panel.root_password(vm)}
@@ -118,7 +124,8 @@ def _check_power(ctx, vm):
         page.require_endpoint(f"/customer/rootserver/{vm}/{a}")
 
 
-@feature("power", "change", "Start, stop (hard), shut down (ACPI) or restart the VM",
+@feature("power", "change", "Start, stop, shut down or restart the VM",
+         "Start, stop (hard), shut down (ACPI) or restart the VM",
          (Param("action", "what to do", choices=POWER_ACTIONS),), verify=_verify_power, check=_check_power)
 def _power(ctx, vm, action):
     _check_power(ctx, vm)
@@ -131,7 +138,8 @@ def _check_set_root_password(ctx, vm):
     page.require_text("password_confirmation")
 
 
-@feature("set-root-password", "change", "Set the root password (generated if omitted); returns it",
+@feature("set-root-password", "change", "Set or generate the root password",
+         "Set the root password (generated if omitted); returns it",
          (Param("password", "the new password", required=False, secret=True),), secret_result=True,
          check=_check_set_root_password)
 def _set_root_password(ctx, vm, password=None):
@@ -141,7 +149,8 @@ def _set_root_password(ctx, vm, password=None):
                     lambda: {**panel_answer(ctx.panel.set_root_password(vm, password)), "root_password": password})
 
 
-@feature("console-input", "change", "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); "
+@feature("console-input", "change", "Type text and press keys at the console",
+         "Type text, then press keys (vncdotool names: enter, ctrl-c, down, f1, ...); "
          "repeat the keys to catch a boot menu",
          (Param("text", "text to type (kept out of the audit log)", required=False, default="", secret=True),
           Param("keys", "keys to press after the text", required=False, multiple=True, default=()),
@@ -183,7 +192,8 @@ def _check_reinstall(ctx, vm):
                                 "cbrm does not send")
 
 
-@feature("reinstall", "destroy", "Reinstall from a template with stored SSH keys baked in. ERASES THE DISK",
+@feature("reinstall", "destroy", "Reinstall from a template, erasing the disk",
+         "Reinstall from a template with stored SSH keys baked in. ERASES THE DISK",
          (Param("template", "name from `templates`"),
           Param("ssh_keys", "names from `ssh-keys`", required=False, multiple=True, default=())),
          check=_check_reinstall)

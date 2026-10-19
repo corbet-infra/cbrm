@@ -9,6 +9,10 @@ from it, and `cbrm.service.Service.run` applies the same rules to every entry:
 There is no risk class for spending money: cbrm never extends, upgrades or tops up anything (Julian's
 decision, 2026-10-13), and `feature()` refuses any risk not listed here.
 
+Every feature has a `summary` (a short line, verb first, for `cbrm features` and the command list) and a `help`
+(the full, precise text for `--help`, `GET /features` and the MCP tool description). Its scope follows from the
+name: `account-*` features act on the whole account (`scope == "account"`), every other feature on one VM.
+
 A feature's `run(ctx, vm, **args)` does all its reading and contract checks first and hands the one
 request that changes something to `ctx.send(description, fn)`: in a dry run that returns the
 description instead of sending. `verify(ctx, vm, result, **args)` re-reads the panel afterwards.
@@ -25,6 +29,7 @@ from ..livewire import Page
 from ..panel import Panel
 
 RISKS = ("read", "secret", "change", "destroy")
+ACCOUNT_NOTE = "Account-wide: acts on the whole account, not limited by the VM allow-list (CBRM_VMS); the VM is optional."
 FILE_TYPES = {"png": "image/png", "pdf": "application/pdf"}  # features that return bytes, by `returns`
 
 
@@ -45,6 +50,7 @@ class Param:
 class Feature:
     name: str
     risk: str
+    summary: str
     help: str
     run: Callable
     params: tuple[Param, ...] = ()
@@ -53,19 +59,26 @@ class Feature:
     returns: str = "json"  # or a file type: "png", "pdf" (bytes; the CLI writes them to --out)
     secret_result: bool = False
 
+    @property
+    def scope(self) -> str:
+        return "account" if self.name.startswith("account-") else "vm"
+
 
 REGISTRY: dict[str, Feature] = {}
 
 
-def feature(name: str, risk: str, help: str, params: tuple[Param, ...] = (), returns: str = "json",
+def feature(name: str, risk: str, summary: str, help: str, params: tuple[Param, ...] = (), returns: str = "json",
             secret_result: bool = False, verify: Callable | None = None, check: Callable | None = None):
     if risk not in RISKS:  # not an assert: python -O must not let a paying or unknown class through
         raise ValueError(f"{name}: unknown risk class {risk!r}")
     if returns != "json" and returns not in FILE_TYPES:
         raise ValueError(f"{name}: unknown result type {returns!r}")
+    if not isinstance(summary, str) or not isinstance(help, str) or not 0 < len(summary.split()) <= 10:
+        # a missing comma between summary and help would glue them into one long summary
+        raise ValueError(f"{name}: needs a summary of at most 10 words and a help text")
 
     def register(fn: Callable) -> Callable:
-        REGISTRY[name] = Feature(name, risk, help, fn, params, verify, check, returns, secret_result)
+        REGISTRY[name] = Feature(name, risk, summary, help, fn, params, verify, check, returns, secret_result)
         return fn
     return register
 

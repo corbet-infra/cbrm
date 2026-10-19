@@ -19,7 +19,7 @@ except ImportError:  # mcp 1.x
 
 from .client import backend
 from .errors import ContractError, PanelError, ServiceError
-from .features import FILE_TYPES, REGISTRY, Feature
+from .features import ACCOUNT_NOTE, FILE_TYPES, REGISTRY, Feature
 
 mcp = _Server("cbrm", instructions=(
     "Operate BERO HOST (bero-host.de) KVM rootservers through the customer panel and the VNC console. "
@@ -41,7 +41,7 @@ def b():
 
 def _tool(f: Feature):
     P = inspect.Parameter
-    account = f.name.startswith("account-")  # account-wide: the VM is optional (any VM names the account context)
+    account = f.scope == "account"  # the VM is optional (any allowed VM names the account context)
     params = [P("vm", P.KEYWORD_ONLY, annotation=str | None, default=None) if account else P("vm", P.KEYWORD_ONLY, annotation=str)]
     for p in f.params:
         ann = list[p.type] if p.multiple else p.type
@@ -72,7 +72,7 @@ def _tool(f: Feature):
         return r
 
     tool.__name__ = "bero_" + f.name.replace("-", "_")
-    tool.__doc__ = f"[{f.risk}] {f.help}."
+    tool.__doc__ = f"[{f.risk}] {f.help}." + (f" {ACCOUNT_NOTE}" if account else "")
     tool.__signature__ = inspect.Signature(params)
     tool.__annotations__ = {p.name: p.annotation for p in params}
     return tool

@@ -172,9 +172,9 @@ def _check_delete(ctx, vm):
 
 # -- reading ----------------------------------------------------------------------------------------------
 
-@feature("account-networks", "read",
-         "Internal networks of the account (account-wide): id, title, description, subnet (assigned by the panel), "
-         "servers with their internal address, and how many networks the account may have", check=_check_list)
+@feature("account-networks", "read", "List internal networks with subnets and servers",
+         "Internal networks of the account: id, title, description, subnet (assigned by the panel), servers with their "
+         "internal address, and how many networks the account may have", check=_check_list)
 def _account_networks(ctx, vm):
     return _networks(_component(ctx, vm))
 
@@ -188,9 +188,9 @@ def _verify_create(ctx, vm, result, title, description=None):
                   if result.get("id") else None)
 
 
-@feature("account-network-create", "change",
-         "Create an internal network (account-wide, not limited by the VM allow-list; free). The panel assigns the "
-         "subnet itself, at most a few networks per account (see `account-networks`)",
+@feature("account-network-create", "change", "Create an internal network",
+         "Create an internal network (free). The panel assigns the subnet itself, at most a few networks per account (see "
+         "`account-networks`)",
          (Param("title", "the network's name, at most 255 characters"),
           Param("description", "a description, at most 2000 characters", required=False)),
          verify=_verify_create, check=_check_create)
@@ -227,9 +227,9 @@ def _verify_edit(ctx, vm, result, network, title=None, description=None):
     return n["title"] == squash_text(result["title"]) and n["description"] == squash_text(result["description"])
 
 
-@feature("account-network-edit", "change",
-         "Change an internal network's title and/or description (account-wide, not limited by the VM allow-list; "
-         "what you leave out stays as it is; an empty description clears it)",
+@feature("account-network-edit", "change", "Change an internal network's title or description",
+         "Change an internal network's title and/or description; what you leave out stays as it is, an empty description "
+         "clears it",
          (Param("network", "the network's id from `account-networks`"),
           Param("title", "the new title, at most 255 characters", required=False),
           Param("description", "the new description, at most 2000 characters; empty (\"\") clears it", required=False, allow_empty=True)),
@@ -265,9 +265,9 @@ def _verify_add(ctx, vm, result, network, server):
     return settle(lambda: result["vm"] in [s["vm"] for s in _find(_networks(_component(ctx, vm, fresh=True)), result["id"])["servers"]])
 
 
-@feature("account-network-server-add", "change",
-         "Add a server of the account to an internal network (account-wide, not limited by the VM allow-list; free). "
-         "Only servers the panel offers for that network can be added",
+@feature("account-network-server-add", "change", "Add a server to an internal network",
+         "Add a server of the account to an internal network (free). Only servers the panel offers for that network can be "
+         "added",
          (Param("network", "the network's id from `account-networks`"),
           Param("server", "the server's VM number, as `status` shows it")),
          verify=_verify_add, check=_check_add)
@@ -298,9 +298,9 @@ def _verify_remove(ctx, vm, result, network, server):
                                                _find(_networks(_component(ctx, vm, fresh=True)), result["id"])["servers"]])
 
 
-@feature("account-network-server-remove", "change",
-         "Remove a server from an internal network (account-wide, not limited by the VM allow-list). The server "
-         "loses its internal address; the panel assigns one again when it is added back",
+@feature("account-network-server-remove", "change", "Remove a server from an internal network",
+         "Remove a server from an internal network. The server loses its internal address; the panel assigns one again when it "
+         "is added back",
          (Param("network", "the network's id from `account-networks`"),
           Param("server", "the server's VM number, as `status` shows it")),
          verify=_verify_remove, check=_check_remove)
@@ -327,9 +327,9 @@ def _verify_delete(ctx, vm, result, network):
     return settle(lambda: result["id"] not in [n["id"] for n in _networks(_component(ctx, vm, fresh=True))["networks"]])
 
 
-@feature("account-network-delete", "destroy",
-         "Delete an internal network (account-wide, not limited by the VM allow-list). Only a network the panel "
-         "offers a delete button for (one without servers); the subnet is gone and may be assigned to another network",
+@feature("account-network-delete", "destroy", "Delete an internal network without servers",
+         "Delete an internal network. Only a network the panel offers a delete button for (one without servers); the subnet is "
+         "gone and may be assigned to another network",
          (Param("network", "the network's id from `account-networks`"),), verify=_verify_delete, check=_check_delete)
 def _account_network_delete(ctx, vm, network):
     nid = _network_id(network)
@@ -379,9 +379,9 @@ def _check_firewalls(ctx, vm):
     _firewalls(_firewall_component(ctx, vm))
 
 
-@feature("account-firewalls", "read",
-         "Firewalls of the account (account-wide): id, name, the servers each is assigned to, how many the account "
-         "may have, and the templates the panel offers for a new one", check=_check_firewalls)
+@feature("account-firewalls", "read", "List firewalls, their servers and the templates",
+         "Firewalls of the account: id, name, the servers each is assigned to, how many the account may have, and the "
+         "templates the panel offers for a new one", check=_check_firewalls)
 def _account_firewalls(ctx, vm):
     return _firewalls(_firewall_component(ctx, vm))
 
@@ -408,9 +408,9 @@ def _check_firewall(ctx, vm):
         _firewall(ctx, vm, listing["firewalls"][0]["id"])
 
 
-@feature("account-firewall", "read",
-         "One firewall (account-wide): name, default policy per direction (ACCEPT or DROP), the rules as the panel "
-         "stores them, and the account's servers with whether each uses this firewall",
+@feature("account-firewall", "read", "Show one firewall's policies, rules and servers",
+         "One firewall: name, default policy per direction (ACCEPT or DROP), the rules as the panel stores them, and the "
+         "account's servers with whether each uses this firewall",
          (Param("firewall", "the firewall's id from `account-firewalls`"),), check=_check_firewall)
 def _account_firewall(ctx, vm, firewall):
     fid = str(firewall).strip()
@@ -452,9 +452,9 @@ def _verify_firewall_create(ctx, vm, result, title, template=None):
                   if result.get("id") else None)
 
 
-@feature("account-firewall-create", "change",
-         "Create a firewall from one of the panel's templates (account-wide, not limited by the VM allow-list; free). It "
-         "applies to no server until one is assigned; the account may have a limited number (see `account-firewalls`)",
+@feature("account-firewall-create", "change", "Create a firewall from a template",
+         "Create a firewall from one of the panel's templates (free). It applies to no server until one is assigned; the "
+         "account may have a limited number (see `account-firewalls`)",
          (Param("title", "the firewall's name, at most 100 characters"),
           Param("template", "a template id from `account-firewalls` (empty, linux, windows, webserver, ...); default: "
                             "the panel's preselected one", required=False)),
@@ -520,10 +520,10 @@ def _verify_firewall_edit(ctx, vm, result, firewall, title=None, policy_in=None,
     return (now["name"], now["policy_in"], now["policy_out"]) == (result["title"], result["policy_in"], result["policy_out"])
 
 
-@feature("account-firewall-edit", "change",
-         "Rename a firewall and/or set its default policy per direction (ACCEPT or DROP; account-wide, not limited by the "
-         "VM allow-list). It applies to every server the firewall is assigned to after about a minute: DROP inbound "
-         "without a rule for SSH locks you out. The rules stay as they are; what you leave out stays as it is",
+@feature("account-firewall-edit", "change", "Rename a firewall or set its default policies",
+         "Rename a firewall and/or set its default policy per direction (ACCEPT or DROP). It applies to every server the "
+         "firewall is assigned to after about a minute: DROP inbound without a rule for SSH locks you out. The rules stay as "
+         "they are; what you leave out stays as it is",
          (Param("firewall", "the firewall's id from `account-firewalls`"),
           Param("title", "the new name, at most 100 characters", required=False),
           Param("policy_in", "default for incoming traffic", required=False, choices=POLICIES),
@@ -576,9 +576,9 @@ def _verify_firewall_server_remove(ctx, vm, result, firewall, server):
                                   for s in _firewall(ctx, vm, result["id"])["servers"]))
 
 
-@feature("account-firewall-server-remove", "change",
-         "Remove a server from a firewall (the editor's 'Entfernen'; account-wide, not limited by the VM allow-list): the "
-         "firewall's rules stop applying to that server after about a minute",
+@feature("account-firewall-server-remove", "change", "Remove a server from a firewall",
+         "Remove a server from a firewall (the editor's 'Entfernen'): the firewall's rules stop applying to that server after "
+         "about a minute",
          (Param("firewall", "the firewall's id from `account-firewalls`"),
           Param("server", "the server's VM number, as `account-firewall` lists it")),
          verify=_verify_firewall_server_remove, check=_check_firewall_server_remove)

@@ -114,9 +114,9 @@ def _check_list(ctx, vm):
     return comp
 
 
-@feature("account-tickets", "read",
-         "Support tickets of the account (account-wide): id, subject, date, status (as the panel labels it); "
-         "newest first, with an optional search and page number",
+@feature("account-tickets", "read", "List support tickets, newest first",
+         "Support tickets of the account: id, subject, date, status (as the panel labels it); newest first, with an optional "
+         "search and page number",
          (Param("search", "only tickets matching this text (the panel's own search)", required=False),
           Param("page", "page number, 1 is the newest", int, required=False, default=1)), check=_check_list)
 def _account_tickets(ctx, vm, search=None, page=1):
@@ -192,9 +192,9 @@ def _check_ticket(ctx, vm):
         _ticket(_ticket_page(ctx, rows[0]["id"]), rows[0]["id"])
 
 
-@feature("account-ticket", "read",
-         "One support ticket with its whole thread (account-wide): subject, status open/closed, who handles it, "
-         "every message with sender (customer/support/system), date and attachment links",
+@feature("account-ticket", "read", "Show one support ticket with its whole thread",
+         "One support ticket with its whole thread: subject, status open/closed, who handles it, every message with sender "
+         "(customer/support/system), date and attachment links",
          (Param("ticket", "the ticket's id from `account-tickets`"),), check=_check_ticket)
 def _account_ticket(ctx, vm, ticket):
     tid = _ticket_id(ticket)
@@ -235,10 +235,9 @@ def _verify_create(ctx, vm, result, subject, text, product=None, attach=None):
     return _ticket(_ticket_page(ctx, result["id"]), result["id"])["subject"] == result["subject"]
 
 
-@feature("account-ticket-create", "change",
-         "Open a support ticket (account-wide, not limited by the VM allow-list), optionally linked to a product "
-         "of the account (a VM number as in `status`) and with attachments (files inside the directory named by "
-         "CBRM_ATTACH_DIR). BERO staff read it: write it as a person would",
+@feature("account-ticket-create", "change", "Open a support ticket",
+         "Open a support ticket, optionally linked to a product of the account (a VM number as in `status`) and with "
+         "attachments (files inside the directory named by CBRM_ATTACH_DIR). BERO staff read it: write it as a person would",
          (Param("subject", "subject, 5..255 characters"), Param("text", "the message, at least 10 characters"),
           Param("product", "link a product: a VM number of the account; omit for none", required=False),
           Param("attach", "a file to attach (relative to CBRM_ATTACH_DIR, at most 5, 10 MiB each)", multiple=True,
@@ -298,9 +297,8 @@ def _check_reply(ctx, vm):
     _new_form(ctx, vm)
 
 
-@feature("account-ticket-reply", "change",
-         "Reply to an open support ticket (account-wide, not limited by the VM allow-list), optionally with "
-         "attachments (files inside the directory named by CBRM_ATTACH_DIR)",
+@feature("account-ticket-reply", "change", "Reply to an open support ticket",
+         "Reply to an open support ticket, optionally with attachments (files inside the directory named by CBRM_ATTACH_DIR)",
          (Param("ticket", "the ticket's id from `account-tickets`"), Param("text", "the message, at least 10 characters"),
           Param("attach", "a file to attach (relative to CBRM_ATTACH_DIR, at most 5, 10 MiB each)", multiple=True,
                 required=False)),
@@ -329,9 +327,9 @@ def _verify_close(ctx, vm, result, ticket):
     return settle(lambda: _ticket(_ticket_page(ctx, result["id"]), result["id"])["status"] == "closed")
 
 
-@feature("account-ticket-close", "change",
-         "Close a support ticket as solved (the panel's 'Mein Anliegen ist gelöst'; account-wide, not limited by "
-         "the VM allow-list). A closed ticket CANNOT be reopened: further questions need a new ticket",
+@feature("account-ticket-close", "change", "Close a support ticket; it cannot be reopened",
+         "Close a support ticket as solved (the panel's 'Mein Anliegen ist gelöst'). A closed ticket CANNOT be reopened: "
+         "further questions need a new ticket",
          (Param("ticket", "the ticket's id from `account-tickets`"),), verify=_verify_close, check=_check_list)
 def _account_ticket_close(ctx, vm, ticket):
     tid = _ticket_id(ticket)

@@ -17,6 +17,6 @@ from . import (  # noqa: F401  (importing registers the features)
     vm_firewall,
     vm_network,
 )
-from .registry import FILE_TYPES, REGISTRY, RISKS, Ctx, Feature, Param
+from .registry import ACCOUNT_NOTE, FILE_TYPES, REGISTRY, RISKS, Ctx, Feature, Param
 
-__all__ = ["FILE_TYPES", "REGISTRY", "RISKS", "Ctx", "Feature", "Param"]
+__all__ = ["ACCOUNT_NOTE", "FILE_TYPES", "REGISTRY", "RISKS", "Ctx", "Feature", "Param"]

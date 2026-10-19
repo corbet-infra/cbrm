@@ -75,12 +75,14 @@ _inv, _inv_check = _table("invoices-table", "searchInvoices", "invoicesPage")
 _ord, _ord_check = _table("orders-table", "searchOrders", "ordersPage")
 _trx, _trx_check = _table("transactions-table", "searchTransactions", "transactionsPage")
 
-feature("account-invoices", "read", "Invoices of the account (account-wide): number, amount, date; newest first",
+feature("account-invoices", "read", "List the account's invoices, newest first",
+        "Invoices of the account: number, amount, date; newest first",
         PARAMS, check=_inv_check)(_inv)
-feature("account-orders", "read", "Orders of the account (account-wide): product, type, date, status as the panel shows it",
+feature("account-orders", "read", "List the account's orders",
+        "Orders of the account: product, type, date, status as the panel shows it",
         PARAMS, check=_ord_check)(_ord)
-feature("account-transactions", "read",
-        "Credit transactions of the account (account-wide): description, amount (negative = spent), date, status",
+feature("account-transactions", "read", "List the account's credit transactions",
+        "Credit transactions of the account: description, amount (negative = spent), date, status",
         PARAMS, check=_trx_check)(_trx)
 
 
@@ -109,8 +111,8 @@ def _check_invoice_pdf(ctx, vm):
         raise ContractError(f"{PAGE}: the invoices have no download links")
 
 
-@feature("account-invoice-download", "read",
-         "One invoice as PDF (account-wide): the panel's download of an invoice number from `account-invoices`",
+@feature("account-invoice-download", "read", "Download one invoice as PDF",
+         "One invoice as PDF: the panel's download of an invoice number from `account-invoices`",
          (Param("invoice", "the invoice number from `account-invoices`"),), returns="pdf", check=_check_invoice_pdf)
 def _account_invoice_download(ctx, vm, invoice):
     number = str(invoice).strip()

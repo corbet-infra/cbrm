@@ -38,7 +38,8 @@ def _find(addresses: list[dict], address: str) -> dict:
     raise ServiceError(f"the VM has no address {address}; it has {[a['address'] for a in addresses]}")
 
 
-@feature("addresses", "read", "The VM's IPv4/IPv6 addresses with prefix length, gateway and reverse DNS entry")
+@feature("addresses", "read", "List IP addresses with gateway and reverse DNS",
+         "The VM's IPv4/IPv6 addresses with prefix length, gateway and reverse DNS entry")
 def _addresses_feature(ctx, vm):
     return _addresses(_component(ctx, vm))
 
@@ -59,7 +60,8 @@ def _verify_rdns(ctx, vm, result, address, name):
     return settle(seen)
 
 
-@feature("rdns-set", "change", "Set the reverse DNS name of one of the VM's IP addresses (see `addresses`)",
+@feature("rdns-set", "change", "Set the reverse DNS name of an address",
+         "Set the reverse DNS name of one of the VM's IP addresses (see `addresses`)",
          (Param("address", "the IP address, as `addresses` lists it"),
           Param("name", "the host name the address should resolve to, e.g. mail.example.org")),
          verify=_verify_rdns, check=_check_rdns)
@@ -112,7 +114,7 @@ def _check_reset(ctx, vm):
     return page, path, _reset_fields(page, path)
 
 
-@feature("network-reset", "destroy",
+@feature("network-reset", "destroy", "Reset the network configuration and software firewall",
          "Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): "
          "everything you configured there is lost",
          check=_check_reset)  # no verify: the panel shows no sign of a network reset to re-read
