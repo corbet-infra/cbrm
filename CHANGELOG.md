@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.1 — 2026-10-19
+
+Documentation and help text only; no command behaves differently.
+
+- Every feature has a short `summary` next to its full help. `cbrm features` and the command list of `cbrm --help`
+  show the summary with the risk class; `cbrm <command> --help`, `GET /features` and the MCP tool descriptions keep
+  the full text.
+- The scope is a field (`Feature.scope`, `vm` or `account`) instead of a sentence repeated in every `account-*` help
+  text: `cbrm features` has a scope column, `--help` and the MCP descriptions mark account-wide commands once, and
+  `cbrm features --json` and `GET /features` carry `scope` and `summary`.
+- The README fits on one screen. The full command table moved to the generated command reference,
+  `docs/command-reference.md` (the wiki's Command reference is a copy), written by `scripts/command_reference.py`,
+  which replaces `scripts/readme_features.py` and `scripts/wiki_reference.py`. The wiki has five pages instead of 14.
+- `network-address-set`'s error message for a malformed address uses the example `10.0.0.5`.
+
 ## 0.6.0 — 2026-10-19
 
 A feature inventory of the whole customer panel (every page, form and Livewire component, read-only) against cbrm,

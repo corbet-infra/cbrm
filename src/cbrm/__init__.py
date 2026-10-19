@@ -4,4 +4,4 @@ from .errors import ContractError, PanelError, ServiceError
 from .panel import Panel
 
 __all__ = ["Panel", "PanelError", "ContractError", "ServiceError", "Console"]
-__version__ = "0.6.0"
+__version__ = "0.6.1"
