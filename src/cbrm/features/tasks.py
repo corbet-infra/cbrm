@@ -34,15 +34,17 @@ def _component(ctx, vm):
 
 def _form_options(page) -> dict[str, dict[str, str]]:
     """The panel's own choices for a new task: field name -> {value: label}."""
-    require_names(page, "methode", "interval", "next_execution_at")
+    require_names(page, "methode", "interval", "next_execution_at", "notification_mode", "notification_email")
     out = {}
-    for field in ("methode", "interval"):
+    for field in ("methode", "interval", "notification_mode"):
         sel = page.tree.css_first(f'select[name="{field}"]')
         if sel is None:
             raise ContractError(f"{page.path}: the task form's '{field}' is no longer a selection")
         out[field] = {o.attributes["value"]: text(o) for o in sel.css("option") if o.attributes.get("value")}
         if not out[field]:
             raise ContractError(f"{page.path}: the task form offers no {field} choices")
+    if "" not in {o.attributes.get("value") for o in page.tree.css('select[name="notification_mode"] option')}:
+        raise ContractError(f"{page.path}: the task form no longer offers 'no e-mail' as the notification default")
     return out
 
 
@@ -80,14 +82,15 @@ def _check_create(ctx, vm):
     page = ctx.product_page(vm)
     path = f"/customer/rootserver/{vm}/scheduled_task/create"
     page.require_endpoint(path)
-    require_post(page, path, "methode", "interval", "next_execution_at")
+    require_post(page, path, "methode", "interval", "next_execution_at", "notification_mode",
+                 "notification_email")
     options = _form_options(page)
     _read(page.component("task"))
     return page, path, options
 
 
 @tolerant
-def _verify_create(ctx, vm, result, action, interval, start):
+def _verify_create(ctx, vm, result, action, interval, start, notification_mode=None, notification_email=None):
     def seen():
         ctx.fresh(vm)
         return any(t["id"] not in result["known_ids"] and t["label"] == result["task"]["action"]
@@ -104,9 +107,14 @@ def _verify_create(ctx, vm, result, action, interval, start):
          (Param("action", "what to run: the panel's own choices (dump, start, restart, shutdown, stop)"),
           Param("interval", "how often: the panel's own choices (daily, 2-days, 3-days, 5-days, weekly, 2-weeks, "
                             "monthly, yearly)"),
-          Param("start", "first run in panel time (Europe/Berlin), YYYY-MM-DD HH:MM, not in the past")),
+          Param("start", "first run in panel time (Europe/Berlin), YYYY-MM-DD HH:MM, not in the past"),
+          Param("notification_mode", "optional e-mail notification: the panel's own choices (always, failed_only); "
+                                     "default: none (the panel's 'Keine E-Mail')", required=False),
+          Param("notification_email", "optional: send the notification to this address instead of the account's "
+                                      "(needs notification_mode); default: the account's own address",
+                required=False)),
          verify=_verify_create, check=_check_create)
-def _task_create(ctx, vm, action, interval, start):
+def _task_create(ctx, vm, action, interval, start, notification_mode=None, notification_email=None):
     page, path, options = _check_create(ctx, vm)
     for field, given, name in (("methode", action, "action"), ("interval", interval, "interval")):
         if given not in options[field]:
@@ -115,12 +123,21 @@ def _task_create(ctx, vm, action, interval, start):
         when = datetime.datetime.strptime(start.strip().replace("T", " "), "%Y-%m-%d %H:%M")
     except ValueError:
         raise ServiceError("start must look like 2026-10-14 03:30 (panel time, Europe/Berlin)") from None
+    mode, email = (notification_mode or "").strip(), (notification_email or "").strip()
+    if mode and mode not in options["notification_mode"]:
+        raise ServiceError(f"notification_mode must be one of {', '.join(options['notification_mode'])} "
+                           "(or left out for no e-mail)")
+    if email and not mode:
+        raise ServiceError("notification_email needs a notification_mode (the panel sends no e-mail without one)")
+    if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        raise ServiceError("notification_email must be an e-mail address")
     now = _panel_now()
     if when < now:
         raise ServiceError(f"start {when:%Y-%m-%d %H:%M} is in the past: it is {now:%Y-%m-%d %H:%M} in panel time "
                            f"({PANEL_TIME_ZONE})")
     tasks = _read(page.component("task"))
-    data = {"methode": action, "interval": interval, "next_execution_at": when.strftime("%Y-%m-%dT%H:%M")}
+    data = {"methode": action, "interval": interval, "next_execution_at": when.strftime("%Y-%m-%dT%H:%M"),
+            "notification_mode": mode, "notification_email": email}
     expected = {"action": options["methode"][action], "interval": options["interval"][interval],
                 "next": when.strftime("%d.%m.%Y %H:%M")}
     same = [t for t in tasks if (t["label"], t["repeat"], t["next"]) == (expected["action"], expected["interval"],

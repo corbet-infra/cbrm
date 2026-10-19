@@ -85,7 +85,7 @@ three offer the same features with the same rules. `cbrm features` lists them.
 | `backup-restore` | destroy | `--backup` `--live`? | Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state |
 | `network-reset` | destroy | – | Reset the VM's network configuration and software firewall (the panel's 'Netzwerk-Reset'): everything you configured there is lost |
 | `reinstall` | destroy | `--template` `--ssh-keys …`? | Reinstall from a template with stored SSH keys baked in. ERASES THE DISK |
-| `task-create` | destroy | `--action` `--interval` `--start` | Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, 3-days, 5-days, weekly, 2-weeks, monthly, yearly). DESTROYING: the task acts later and repeatedly without you until it is deleted (a stop or restart task keeps interrupting the VM, a backup task may rotate or overwrite backups), so it needs both confirmations |
+| `task-create` | destroy | `--action` `--interval` `--start` `--notification-mode`? `--notification-email`? | Schedule an action for the VM (action dump = backup, start, restart, shutdown, stop; interval daily, 2-days, 3-days, 5-days, weekly, 2-weeks, monthly, yearly). DESTROYING: the task acts later and repeatedly without you until it is deleted (a stop or restart task keeps interrupting the VM, a backup task may rotate or overwrite backups), so it needs both confirmations |
 <!-- features:end -->
 
 | Risk | What cbrm requires |

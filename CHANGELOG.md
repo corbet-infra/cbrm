@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.2 — 2026-10-19
+
+- `task-create` follows the panel's changed form, which now also posts `notification_mode` and `notification_email`
+  (`doctor` had reported it BROKEN). Two new optional parameters, `--notification-mode` (the panel's own choices,
+  `always` or `failed_only`) and `--notification-email` (needs a mode; default: the account's address). Left out,
+  nothing changes: the post sends the panel's own default, no e-mail. The fixtures and tests carry the new fields.
+
 ## 0.5.1 — 2026-10-19
 
 - Per-VM internal-network changes (class `change`, with `verify` and a `doctor` check), from the product page's

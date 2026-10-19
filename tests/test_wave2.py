@@ -388,8 +388,31 @@ def test_task_create_follows_the_panels_form_and_verifies(svc):
     r = svc.run("task-create", "1", {"action": "restart", "interval": "weekly", "start": "2026-10-20T03:30"}, confirm="1",
                 confirm_destroy="1")
     assert svc.panel.http.forms == [("/customer/rootserver/1/scheduled_task/create", {
-        "_token": "TOKEN", "methode": "restart", "interval": "weekly", "next_execution_at": "2026-10-20T03:30"})]
+        "_token": "TOKEN", "methode": "restart", "interval": "weekly", "next_execution_at": "2026-10-20T03:30",
+        "notification_mode": "", "notification_email": ""})]
     assert r["verified"] is True
+
+
+def test_task_create_sends_the_optional_notification(svc):
+    args = {"action": "restart", "interval": "weekly", "start": "2026-10-20 03:30",
+            "notification_mode": "failed_only", "notification_email": "ops@example.org"}
+    r = svc.run("task-create", "1", args, confirm="1", confirm_destroy="1", dry_run=True)
+    assert r["dry_run"] is True and sent_nothing(svc)
+    svc.panel.http.hooks["/customer/rootserver/1/scheduled_task/create"] = lambda: svc.panel.pages.__setitem__(
+        P, with_second_task(PRODUCT))
+    svc.run("task-create", "1", args, confirm="1", confirm_destroy="1")
+    sent = svc.panel.http.forms[0][1]
+    assert (sent["notification_mode"], sent["notification_email"]) == ("failed_only", "ops@example.org")
+
+
+@pytest.mark.parametrize("extra", [{"notification_mode": "sometimes"},
+                                   {"notification_email": "ops@example.org"},
+                                   {"notification_mode": "always", "notification_email": "not-an-address"}])
+def test_task_create_refuses_a_bad_notification(svc, extra):
+    args = {"action": "restart", "interval": "weekly", "start": "2026-10-20 03:30", **extra}
+    with pytest.raises(ServiceError):
+        svc.run("task-create", "1", args, dry_run=True)
+    assert sent_nothing(svc)
 
 
 @pytest.mark.parametrize("args", [{"action": "format", "interval": "weekly", "start": "2026-10-20 03:30"},
@@ -516,6 +539,8 @@ CHANGES = [  # feature, args, risk-confirmations, (page, old, new)
     ("task-create", ARGS["task-create"], P, "scheduled_task/create", "scheduled_task/add"),
     ("task-create", ARGS["task-create"], P, "next_execution_at: document", "start: document"),
     ("task-create", ARGS["task-create"], P, 'name="methode"', 'name="method"'),
+    ("task-create", ARGS["task-create"], P, "notification_mode: document", "notify_mode: document"),
+    ("task-create", ARGS["task-create"], P, 'name="notification_email"', 'name="notify_email"'),
     ("task-delete", ARGS["task-delete"], P, "scheduled_task/delete/", "scheduled_task/remove/"),
     ("rdns-set", ARGS["rdns-set"], P, "openRdnsModal", "openDnsModal"),
     ("rdns-set", ARGS["rdns-set"], P, 'wire:model.live="rdnsEntry"', 'wire:model.live="entry"'),
