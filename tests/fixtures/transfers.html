@@ -1,0 +1,11 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"><title>Mein Transfer-Code</title></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.transfer.transfer-code&quot;, &quot;path&quot;: &quot;customer/transfers&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.transfer.transfer-code">
+
+<h2 class="bt-card-title">Mein Transfer-Code</h2>
+<p class="bt-muted mb-3">Persönliche Daten wie deine E-Mail-Adresse werden dabei nicht weitergegeben.</p>
+<div class="bt-code">00000000-0000-4000-8000-00000000000b</div>
+<button type="button" class="bt-btn-primary" x-on:click="navigator.clipboard.writeText('00000000-0000-4000-8000-00000000000b'); copied = true"><span x-show="! copied"> Kopieren</span></button>
+<button type="button" wire:click="regenerate" wire:confirm="Möchtest du wirklich einen neuen Code erzeugen? Der bisherige Code ist danach ungültig."> Neuen Code erzeugen </button>
+</div>
+</body></html>

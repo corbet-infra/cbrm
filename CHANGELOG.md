@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.6.0 — 2026-10-19
+
+A feature inventory of the whole customer panel (every page, form and Livewire component, read-only) against cbrm,
+and the gaps closed where the panel's controls could be recorded. All new features have a `doctor` check; `doctor`
+passed for all 75 features against the live panel.
+
+New on the server (the allow-list applies):
+
+- `activity`: the panel's activity list — who (you, or a customer the product is shared with) did what, and when.
+- `updates` and `updates-install`: pending server updates and installing them (only while the panel lists some).
+- `running-task`: the task the panel is running on the server right now.
+- `firewall`: the server's firewall and its mail ports (unlocked since when, or locked); `firewall-unassign`;
+  `mail-unlock-request` asks BERO to unlock the mail ports (purpose, mail host name, and the panel's terms
+  confirmation as `--accept-terms yes`).
+- `drive-add`: add a CD drive (only while the panel offers one).
+- `task-notification-set`: a scheduled task's e-mail notification (none, always, failed_only; optional address).
+- `logs` takes `--search` and `--page` (the panel's own search and pages) and reports each entry's status
+  (`ok`, `failed`); it now reads the panel's log component directly.
+- `tasks` shows each task's notification; `backups` shows whether a backup is protected.
+
+New for the whole account (`account-*`, not limited by the VM allow-list):
+
+- `account-firewall-create` (from a template), `account-firewall-edit` (name and default policies; the rules stay as
+  they are; a lockout warning of the panel is reported), `account-firewall-server-remove`.
+- `account-codes` and `account-code-regenerate`: the share code and the transfer code.
+- `account-invoice-download`: an invoice as PDF (CLI `--out`, HTTP `application/pdf`, MCP base64).
+
+Other changes:
+
+- `cbrm --version`; every command's `--help` describes it with its risk class; `cbrm features` works without a login.
+- `reinstall` refuses if the panel's form starts sending a field cbrm does not send.
+- The project lives at https://forge.corbet.ch/corbet-infra/cbrm, with a wiki for users and contributors; the package
+  metadata points there (homepage, documentation, issues, changelog, releases).
+- Development: a ruff configuration in `pyproject.toml`; the console test finds the package from the source tree;
+  every test fixture is checked for account data.
+- Repository: the history was rewritten to remove example values that were real server numbers from the first
+  commits; every tag was re-created and signed on the rewritten commits.
+
+Not covered (see the wiki's FAQ): anything that costs money, server transfers, the login's own security settings,
+and — because the panel renders their controls only in states that could not be recorded without changing
+something — firewall rules, assigning or deleting a firewall, sharing a product, protecting a backup and restoring
+single files from a backup.
+
 ## 0.5.2 — 2026-10-19
 
 - `task-create` follows the panel's changed form, which now also posts `notification_mode` and `notification_email`

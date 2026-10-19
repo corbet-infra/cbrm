@@ -1,8 +1,11 @@
 """Private (internal) networks and firewalls of the whole account, from the panel's /customer/network page.
 
-Internal networks: list, create, edit title and description, add and remove servers, delete. Firewalls: read only
-(templates, assigned servers, default policy and rules). All account-wide: the VM argument only names the account
-context (see `common`); what they touch is the whole account, not limited by the VM allow-list.
+Internal networks: list, create, edit title and description, add and remove servers, delete. Firewalls: list and
+read (templates, assigned servers, default policy and rules), create from a template, rename and set the default
+policies (the rules are sent back as the panel holds them), and remove a server. Adding, changing or deleting rules,
+assigning a server and deleting a firewall are not covered: the panel renders those controls only in states that could
+not be recorded read-only, and cbrm does not send what it has not seen. All account-wide: the VM argument only names
+the account context (see `common`); what they touch is the whole account, not limited by the VM allow-list.
 
 The panel gives a network's subnet itself and allows a few per account; both are only read. The buttons that add
 a server and delete a network only exist while they apply (a network with servers cannot be deleted, a network
@@ -414,3 +417,187 @@ def _account_firewall(ctx, vm, firewall):
     if not re.fullmatch(r"[0-9]{1,12}", fid):
         raise ServiceError("a firewall is addressed by its id (see `account-firewalls`)")
     return _firewall(ctx, vm, fid)
+
+
+# -- firewalls: create, edit, remove a server -------------------------------------------------------------
+
+FIREWALL_TITLE_MAX = 100
+POLICIES = ("ACCEPT", "DROP")
+
+
+def _firewall_id(v) -> str:
+    v = str(v).strip()
+    if not re.fullmatch(r"[0-9]{1,12}", v):
+        raise ServiceError("a firewall is addressed by its id (see `account-firewalls`)")
+    return v
+
+
+def _check_firewall_create(ctx, vm):
+    comp = _firewall_component(ctx, vm)
+    _firewalls(comp)
+    if comp.tree.css_first("form[wire\\:submit='create']") is None:
+        raise ContractError("firewalls: the 'Firewall anlegen' form is gone")
+    comp.require("create", models=("title", "template"))
+    node = comp.tree.css_first("#firewallTitle")
+    if node is None or int(node.attributes.get("maxlength") or 0) != FIREWALL_TITLE_MAX:
+        raise ContractError(f"firewalls: #firewallTitle no longer has the length limit {FIREWALL_TITLE_MAX}")
+    value(comp, "template")
+    return comp
+
+
+@tolerant
+def _verify_firewall_create(ctx, vm, result, title, template=None):
+    return settle(lambda: any(f["id"] == result["id"] and f["name"] == result["title"]
+                              for f in _firewalls(site_page(ctx, vm, PAGE, fresh=True).component("firewalls"))["firewalls"])
+                  if result.get("id") else None)
+
+
+@feature("account-firewall-create", "change",
+         "Create a firewall from one of the panel's templates (account-wide, not limited by the VM allow-list; free). It "
+         "applies to no server until one is assigned; the account may have a limited number (see `account-firewalls`)",
+         (Param("title", "the firewall's name, at most 100 characters"),
+          Param("template", "a template id from `account-firewalls` (empty, linux, windows, webserver, ...); default: "
+                            "the panel's preselected one", required=False)),
+         verify=_verify_firewall_create, check=_check_firewall_create)
+def _account_firewall_create(ctx, vm, title, template=None):
+    title = clean(title, "title", 1, FIREWALL_TITLE_MAX)
+    comp = _check_firewall_create(ctx, vm)
+    listing = _firewalls(comp)
+    if listing["used"] >= listing["limit"]:
+        raise ServiceError(f"the account has {listing['used']} of {listing['limit']} firewalls")
+    offered = [t["id"] for t in listing["templates"]]
+    template = (template or str(value(comp, "template"))).strip()
+    if template not in offered:
+        raise ServiceError(f"template must be one of {offered}")
+    known = {f["id"] for f in listing["firewalls"]}
+
+    def go():
+        done = comp.call(("create", []), updates={"title": title, "template": template})
+        after = _firewalls(site_page(ctx, vm, PAGE, fresh=True).component("firewalls"))["firewalls"]
+        new = [f for f in after if f["id"] not in known]
+        return {"id": new[0]["id"] if len(new) == 1 else None, "title": title, "template": template,
+                "messages": done.messages()}
+    return ctx.send(f"Livewire firewalls: title={title!r}, template={template!r}, create()", go)
+
+
+def _editor(ctx, vm, fid: str) -> Component:
+    site_page(ctx, vm, PAGE)  # also proves the VM belongs to the account
+    comp = Page(ctx.panel, f"{PAGE}/firewall/{fid}").component("firewall-editor")
+    if value(comp, "loadFailed"):
+        raise ContractError("firewall-editor: the panel could not load the firewall")
+    if str(value(comp, "firewallId")) != fid:
+        raise ContractError("firewall-editor: the panel shows another firewall than asked for")
+    return comp
+
+
+def _policy_select(comp: Component, model: str):
+    return next((s for s in comp.tree.css("select")
+                 if any(k.startswith("wire:model") and v == model for k, v in s.attributes.items())), None)
+
+
+def _check_editor(comp: Component) -> Component:
+    comp.require("save", models=("title", "policyIn", "policyOut"))
+    node = comp.tree.css_first("#firewallEditorTitle")
+    if node is None or int(node.attributes.get("maxlength") or 0) != FIREWALL_TITLE_MAX:
+        raise ContractError(f"firewall-editor: #firewallEditorTitle no longer has the length limit {FIREWALL_TITLE_MAX}")
+    for model in ("policyIn", "policyOut"):
+        sel = _policy_select(comp, model)
+        if sel is None or {o.attributes.get("value") for o in sel.css("option")} != set(POLICIES):
+            raise ContractError(f"firewall-editor: the {model} selection no longer offers exactly {list(POLICIES)}")
+    value(comp, "rules"), value(comp, "lockoutWarningFor")
+    return comp
+
+
+def _check_firewall_edit(ctx, vm):
+    listing = _firewalls(_firewall_component(ctx, vm))
+    if listing["firewalls"]:
+        _check_editor(_editor(ctx, vm, listing["firewalls"][0]["id"]))
+
+
+@tolerant
+def _verify_firewall_edit(ctx, vm, result, firewall, title=None, policy_in=None, policy_out=None):
+    now = _firewall(ctx, vm, result["id"])
+    return (now["name"], now["policy_in"], now["policy_out"]) == (result["title"], result["policy_in"], result["policy_out"])
+
+
+@feature("account-firewall-edit", "change",
+         "Rename a firewall and/or set its default policy per direction (ACCEPT or DROP; account-wide, not limited by the "
+         "VM allow-list). It applies to every server the firewall is assigned to after about a minute: DROP inbound "
+         "without a rule for SSH locks you out. The rules stay as they are; what you leave out stays as it is",
+         (Param("firewall", "the firewall's id from `account-firewalls`"),
+          Param("title", "the new name, at most 100 characters", required=False),
+          Param("policy_in", "default for incoming traffic", required=False, choices=POLICIES),
+          Param("policy_out", "default for outgoing traffic", required=False, choices=POLICIES)),
+         verify=_verify_firewall_edit, check=_check_firewall_edit)
+def _account_firewall_edit(ctx, vm, firewall, title=None, policy_in=None, policy_out=None):
+    fid = _firewall_id(firewall)
+    if title is None and policy_in is None and policy_out is None:
+        raise ServiceError("give a new title, policy_in and/or policy_out")
+    title = clean(title, "title", 1, FIREWALL_TITLE_MAX) if title is not None else None
+    _find_firewall(ctx, vm, fid)
+    comp = _check_editor(_editor(ctx, vm, fid))
+    current = {"title": value(comp, "title"), "policyIn": value(comp, "policyIn"), "policyOut": value(comp, "policyOut")}
+    updates = {k: v for k, v in (("title", title), ("policyIn", policy_in), ("policyOut", policy_out)) if v is not None}
+    want = {**current, **updates}
+
+    def go():
+        done = comp.call(("save", []), updates=updates)
+        out = {"id": fid, "title": want["title"], "policy_in": want["policyIn"], "policy_out": want["policyOut"],
+               "messages": done.messages()}
+        warning = value(done, "lockoutWarningFor")
+        if warning:
+            out["lockout_warning"] = warning  # the panel warns that this change could lock you out
+        return out
+    return ctx.send(f"Livewire firewall-editor {fid}: " + ", ".join(f"{k}={v!r}" for k, v in updates.items())
+                    + f", save() [was {current}; the rules are sent as they are]", go)
+
+
+def _find_firewall(ctx, vm, fid: str) -> dict:
+    listing = _firewalls(_firewall_component(ctx, vm))
+    for f in listing["firewalls"]:
+        if f["id"] == fid:
+            return f
+    raise ServiceError(f"the account has no firewall {fid}; it has {[f['id'] for f in listing['firewalls']]}")
+
+
+def _check_firewall_server_remove(ctx, vm):
+    listing = _firewalls(_firewall_component(ctx, vm))
+    for f in listing["firewalls"][:1]:
+        comp = _editor(ctx, vm, f["id"])
+        for row in comp.tree.css("[wire\\:key^='firewall-server-']"):
+            svm = row.attributes["wire:key"].rsplit("-", 1)[-1]
+            if "nutzt diese Firewall" in squash(row) and _own_calls(row, "unassignServer") != {svm}:
+                raise ContractError(f"firewall-editor: the remove button of server {svm} names another server")
+
+
+@tolerant
+def _verify_firewall_server_remove(ctx, vm, result, firewall, server):
+    return settle(lambda: not any(s["vm"] == result["vm"] and s["uses_this_firewall"]
+                                  for s in _firewall(ctx, vm, result["id"])["servers"]))
+
+
+@feature("account-firewall-server-remove", "change",
+         "Remove a server from a firewall (the editor's 'Entfernen'; account-wide, not limited by the VM allow-list): the "
+         "firewall's rules stop applying to that server after about a minute",
+         (Param("firewall", "the firewall's id from `account-firewalls`"),
+          Param("server", "the server's VM number, as `account-firewall` lists it")),
+         verify=_verify_firewall_server_remove, check=_check_firewall_server_remove)
+def _account_firewall_server_remove(ctx, vm, firewall, server):
+    fid = _firewall_id(firewall)
+    svm = str(server).strip().lstrip("#")
+    if not svm.isdigit():
+        raise ServiceError("a server is addressed by its VM number")
+    _find_firewall(ctx, vm, fid)
+    comp = _editor(ctx, vm, fid)
+    row = next(iter(comp.tree.css(f"[wire\\:key='firewall-server-{svm}']")), None)
+    if row is None or "nutzt diese Firewall" not in squash(row):
+        raise ServiceError(f"server {svm} does not use firewall {fid}")
+    if _own_calls(row, "unassignServer") != {svm}:
+        raise ContractError(f"firewall-editor: the remove button of server {svm} names another server")
+    comp.require("unassignServer")
+    name = row.css_first(".fw-bold")
+
+    def go():
+        done = comp.call(("unassignServer", [int(svm)]))
+        return {"id": fid, "vm": svm, "messages": done.messages()}
+    return ctx.send(f"Livewire firewall-editor {fid}: unassignServer({svm}) [{squash(name) if name else svm}]", go)

@@ -46,7 +46,20 @@ Other account-level pages are read through `site_page` (`/customer/network`, `/c
 | Tickets | `customerarea.support.tickets.overview` (Livewire: `searchTickets`, `paginators.ticketsPage`); the thread is a server-rendered page; open, reply and close are plain forms / a link (`POST /customer/support/ticket/neu`, `POST …/antworten/<id>`, `GET …/changestatus/<id>`) | list through the component, thread parsed from the page, forms posted with the page's own token; attachments only from `CBRM_ATTACH_DIR` |
 | Internal networks | `customerarea.network.internal-networks` (`create`, `startEdit`+`saveEdit`, `removeServer`, a server selection `serverToAdd.<id>` with an add button, a delete button) | the add and delete methods are found in the network's own block (the panel renders them only while they apply), never assumed; the id in the button must be the network's |
 | Firewalls | `customerarea.network.firewalls` list and the editor page `/customer/network/firewall/<id>` | read only |
-| Bookkeeping | `customerarea.accounting.{invoices,orders,transactions}-table` | read only; search and page through the component's own state |
+| Bookkeeping | `customerarea.accounting.{invoices,orders,transactions}-table`; invoice PDFs at `/customer/rechnungen/herunterladen/<number>` | read only; search and page through the component's own state; a PDF only from a link the table shows |
+| Firewalls (writing) | `firewalls`: `create` (models `title`, `template`); the editor: `save` (models `title`, `policyIn`, `policyOut`; `rules` stays as the panel holds it), `unassignServer(<vm>)` | create from a listed template, rename and set policies, remove a server whose own button names it; rules, assigning and deleting are not covered (never rendered while recorded) |
+| Codes | `customerarea.share.share-code` on `/customer/shares`, `customerarea.transfer.transfer-code` on `/customer/transfers` (`regenerate`) | read the UUID shown, regenerate |
+
+On the product page, besides the components above:
+
+| Feature group | Panel mechanism | cbrm |
+|---|---|---|
+| Activity | `customerarea.service.activity-log` (lazy): rows `service-activity-<id>` with actor, text and date | read |
+| Logs | `rootserver.logs-table` (lazy; `logSearch`, `paginators.logPage`; a coloured dot per row) | read with the component's own search and pages; status ok/failed from the dot |
+| Updates, running task | `rootserver.updates` (`installUpdates`), `rootserver.running-task` (polled notice) | read; install only while the panel lists updates |
+| Firewall card | `rootserver.firewall` (`rootserverId` = the VM; `unassign`; `requestMailUnlock` with `purpose`, `mailHostname`, `acceptTerms`) | read the active firewall and the mail-port state; unassign; request the unlock only while the ports are locked and the request is offered |
+| Drives | `rootserver.drive` (`addDrive` on the tile `addNewDriveToRootserver`) | add only while the tile is shown |
+| Task notifications | the page's `$.post('…/scheduled_task/notification/' + id, {notification_mode, notification_email})`; the bell button carries `data-task-id`, `data-mode`, `data-email` | the exact fields of the page's own post, to the task whose bell names it |
 
 Interfaces report a contract error distinctly: CLI "the panel changed, nothing was sent", HTTP 409,
 an MCP tool error with the same text.
@@ -55,7 +68,7 @@ an MCP tool error with the same text.
 
 | Need | What the panel does | What cbrm does |
 |---|---|---|
-| Login | form with a CSRF `_token`, session cookie | GET `/login`, POST the form, keep the cookies (`cookies.json`, 0600) and log in again when a page redirects to `/login` |
+| Login | the Livewire component `auth.login` (models `email`, `password`; method `login`), session cookie | call it like the page does, keep the cookies (`cookies.json`, 0600) and log in again when a page redirects to `/login` |
 | Products | links `/customer/products/<id>` on `/customer`; titles `KVM Server: #<vm> (KVM Rootserver #<id>)` | map VM id → product id |
 | Status | server-rendered product page | read the labelled values after `KVM Rootserver #<id>` |
 | Action log | a lazy Livewire component (`…logs-table`) | replay its `__lazyLoad` call with its own snapshot, parse the rendered rows |

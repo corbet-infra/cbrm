@@ -1,11 +1,10 @@
 """The HTTP API: every route needs the token, including the schema; odd tokens are a 401, not a 500."""
 import pytest
 from fastapi.testclient import TestClient
+from test_service import FakePanel
 
 from cbrm.api import create_app
 from cbrm.service import Service
-
-from test_service import FakePanel
 
 
 @pytest.fixture

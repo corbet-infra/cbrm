@@ -10,13 +10,12 @@ import zoneinfo
 from dataclasses import replace
 
 import pytest
+import test_service
+from test_wave2 import ACCOUNT, PRODUCT, A, P, fingerprint, make_key, sent_nothing, svc_for
 
 from cbrm.errors import ContractError, PanelError, ServiceError
 from cbrm.features import REGISTRY, account, common, registry, tasks
 from cbrm.service import Service
-
-import test_service
-from test_wave2 import A, ACCOUNT, P, PRODUCT, fingerprint, make_key, sent_nothing, svc_for
 
 
 @pytest.fixture

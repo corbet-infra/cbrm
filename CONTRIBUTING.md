@@ -1,7 +1,7 @@
 # Contributing
 
 Thank you for helping. The primary repository is
-[git.corbet.ch/corbet-infra/cbrm](https://git.corbet.ch/corbet-infra/cbrm); please open issues and pull
+[forge.corbet.ch/corbet-infra/cbrm](https://forge.corbet.ch/corbet-infra/cbrm); please open issues and pull
 requests there. GitHub, GitLab and Bitbucket carry read-only mirrors.
 
 ## Development
@@ -9,10 +9,13 @@ requests there. GitHub, GitLab and Bitbucket carry read-only mirrors.
 ```sh
 nix develop          # Python with all dependencies, pytest, ruff
 pytest               # unit tests, no network
+ruff check .         # lint; the rules are in pyproject.toml
 nix build            # the package; runs the tests
 ```
 
-Without Nix: `python -m venv .venv && .venv/bin/pip install -e . pytest`.
+Without Nix: `uv run --with pytest pytest` (or `python -m venv .venv && .venv/bin/pip install -e . pytest`).
+The wiki's [Development](https://forge.corbet.ch/corbet-infra/cbrm/wiki/Development) page explains the
+layout and how to add a feature.
 
 ## Ground rules
 

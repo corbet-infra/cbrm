@@ -28,3 +28,13 @@ def test_readme_table_shows_every_features_risk_class():
     table = readme.split("<!-- features:begin")[1].split("<!-- features:end")[0]
     wrong = [n for n, f in REGISTRY.items() if f"| `{n}` | {f.risk} |" not in table]
     assert not wrong, f"regenerate the README feature table; wrong risk class for: {wrong}"
+
+
+def test_wiki_command_reference_groups_every_feature():
+    """`scripts/wiki_reference.py` writes the wiki's command reference by area: a new feature needs a place there."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("wiki_reference", Path(__file__).parents[1] / "scripts" / "wiki_reference.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    listed = [n for _, names in module.AREAS for n in names]
+    assert sorted(listed) == sorted(REGISTRY), "add the feature to AREAS in scripts/wiki_reference.py"

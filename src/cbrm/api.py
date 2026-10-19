@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from . import __version__
 from .errors import ContractError, PanelError, ServiceError
-from .features import REGISTRY
+from .features import FILE_TYPES, REGISTRY
 from .service import Service
 
 _bearer = HTTPBearer()
@@ -54,8 +54,10 @@ def create_app(service: Service) -> FastAPI:
     async def panel(_: Request, e: PanelError):
         return JSONResponse({"detail": str(e), "kind": "panel-error"}, status_code=502)
 
-    def respond(result):
-        return Response(result, media_type="image/png") if isinstance(result, bytes) else result
+    def respond(feature: str, result):
+        if isinstance(result, bytes):
+            return Response(result, media_type=FILE_TYPES.get(REGISTRY[feature].returns, "application/octet-stream"))
+        return result
 
     @app.get("/features")
     def features() -> list[dict]:
@@ -77,11 +79,11 @@ def create_app(service: Service) -> FastAPI:
             raise ServiceError(f"GET serves read features only; use POST for {feature!r}")
         q = request.query_params
         args = {p.name: (q.getlist(p.name) if p.multiple else q[p.name]) for p in f.params if p.name in q}
-        return respond(service.run(feature, vm, args))
+        return respond(feature, service.run(feature, vm, args))
 
     @app.post("/vms/{vm}/{feature}")
     def run(vm: str, feature: str, body: RunRequest):
-        return respond(service.run(feature, vm, body.args, confirm=body.confirm, confirm_destroy=body.confirm_destroy,
-                                   dry_run=body.dry_run))
+        return respond(feature, service.run(feature, vm, body.args, confirm=body.confirm,
+                                            confirm_destroy=body.confirm_destroy, dry_run=body.dry_run))
 
     return app

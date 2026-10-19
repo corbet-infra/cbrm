@@ -143,6 +143,7 @@ def test_typed_text_never_reaches_the_audit_log(svc, monkeypatch):
 
 def test_verification_errors_are_not_reported_as_not_sent(svc, monkeypatch):
     from dataclasses import replace
+
     from cbrm.features import registry
     def boom(*a, **k): raise ContractError("rendering vanished")
     monkeypatch.setitem(registry.REGISTRY, "power", replace(registry.REGISTRY["power"], verify=boom))

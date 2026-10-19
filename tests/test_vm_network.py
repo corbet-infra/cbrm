@@ -4,7 +4,6 @@ fake panel without network.
 
 The connected card was recorded from the live panel. The unconnected card was not on screen (no VM was free to look
 at), so `vm_network_free.html` is synthetic: the plain Livewire shape the connected card implies."""
-import json
 from pathlib import Path
 
 import pytest

@@ -36,7 +36,8 @@ class Client:
     def run(self, name, vm, args=None, *, confirm=None, confirm_destroy=None, dry_run=False):
         r = self._do("POST", f"/vms/{vm}/{name}", json={"args": args or {}, "confirm": confirm, "confirm_destroy":
                      confirm_destroy, "dry_run": dry_run})
-        return r.content if r.headers.get("content-type", "").startswith("image/") else r.json()
+        kind = r.headers.get("content-type", "")
+        return r.content if kind.startswith(("image/", "application/pdf")) else r.json()
 
 
 def backend():

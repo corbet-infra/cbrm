@@ -60,14 +60,14 @@ class Console:
                                return_when=asyncio.FIRST_COMPLETED)
         writer.close()
 
-    def __enter__(self) -> "Console":
+    def __enter__(self) -> Console:
         try:
             return self._open()
         except BaseException:
             self._stop()
             raise
 
-    def _open(self) -> "Console":
+    def _open(self) -> Console:
         self._thread.start()
         self._server = asyncio.run_coroutine_threadsafe(
             asyncio.start_server(self._bridge, "127.0.0.1", 0), self._loop).result(10)

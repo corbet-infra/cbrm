@@ -9,9 +9,8 @@ from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from ..errors import ContractError, ServiceError
 from ..panel import POWER_ACTIONS
-from .common import panel_answer
+from .common import panel_answer, panel_date, text
 from .registry import Param, feature
-
 
 # -- reading -----------------------------------------------------------------------------------------
 
@@ -20,10 +19,50 @@ def _status(ctx, vm):
     return ctx.panel.status(vm)
 
 
-@feature("logs", "read", "The panel's action log, newest first, in panel time (Europe/Berlin)",
-         (Param("n", "how many entries", int, False, default=20),))
-def _logs(ctx, vm, n=20):
-    return [e.__dict__ for e in ctx.panel.logs(vm)[: int(n)]]
+_LOG_STATUS = {"text-success": "ok", "text-danger": "failed", "text-warning": "running"}
+
+
+def _log_rows(comp) -> list[dict]:
+    """Rows of the `logs-table` component: 'Status: <dot>  Datum : 11.10.2026 | 00:02 Uhr  Aktion: Starten'."""
+    out = []
+    for row in comp.tree.css("div.grey-transparent-background"):
+        cells = {}
+        for label in row.css("b.d-xl-none"):
+            key = text(label).rstrip(":").strip()
+            cells[key] = (label.parent, text(label.parent).removeprefix(text(label)).strip())
+        if "Datum" not in cells or "Aktion" not in cells:
+            raise ContractError("logs-table: a row without 'Datum' or 'Aktion'")
+        dot = cells["Status"][0].css_first("i") if "Status" in cells else None
+        classes = (dot.attributes.get("class") or "").split() if dot is not None else []
+        status = next((v for k, v in _LOG_STATUS.items() if k in classes),
+                      next((c.removeprefix("text-") for c in classes if c.startswith("text-")), None))
+        out.append({"date": panel_date(cells["Datum"][1]), "action": cells["Aktion"][1], "status": status})
+    return out
+
+
+def _check_logs(ctx, vm):
+    comp = ctx.product_page(vm).component("logs-table").require(models=("logSearch",))
+    _log_rows(comp)
+    return comp
+
+
+@feature("logs", "read", "The panel's action log, newest first, in panel time (Europe/Berlin): date, action and "
+         "status (ok, failed); a page of the log, optionally filtered with the panel's own search",
+         (Param("n", "how many entries of the page", int, False, default=20),
+          Param("search", "only entries matching this text (the panel's own search)", required=False),
+          Param("page", "page number, 1 is the newest", int, required=False, default=1)), check=_check_logs)
+def _logs(ctx, vm, n=20, search=None, page=1):
+    if not 1 <= int(page) <= 1000:
+        raise ServiceError("page must be 1..1000")
+    comp = _check_logs(ctx, vm)
+    updates = {}
+    if search:
+        updates["logSearch"] = search.strip()
+    if int(page) != 1:
+        updates["paginators.logPage"] = int(page)  # the component's own page state
+    if updates:
+        comp = comp._send(updates, [])
+    return _log_rows(comp)[: int(n)]
 
 
 def _check_console(ctx, vm):
@@ -127,12 +166,21 @@ def _console_input(ctx, vm, text="", keys=(), repeat=1, interval=1.0):
 
 # -- destroying --------------------------------------------------------------------------------------
 
+REINSTALL_FIELDS = {"_token", "template"}  # what the panel's form serializes, besides the ssh_keys[] its script adds
+
+
 def _check_reinstall(ctx, vm):
     page = ctx.product_page(vm)
     page.require_endpoint(f"/customer/rootserver/{vm}/reinstall")
     if HTMLParser(page.html).css_first('select#rootserverTemplate[name="template"]') is None:
         raise ContractError("reinstall form: template selection missing")
     page.require_text('name="ssh_keys[]"')  # the field the panel's script builds for the chosen keys
+    form = page.tree.css_first("#reinstallServerForm")
+    if form is not None:  # the panel posts the form serialized: a named field cbrm does not send would change the request
+        named = {n.attributes.get("name") for n in form.css("input[name], select[name], textarea[name]")} - {"ssh_keys[]"}
+        if named - REINSTALL_FIELDS:
+            raise ContractError(f"reinstall form: the panel's form also sends {sorted(named - REINSTALL_FIELDS)}, which "
+                                "cbrm does not send")
 
 
 @feature("reinstall", "destroy", "Reinstall from a template with stored SSH keys baked in. ERASES THE DISK",

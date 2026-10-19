@@ -218,3 +218,28 @@ def _drive_delete(ctx, vm, drive):
     return ctx.send(f"Livewire drive: setCurrentDrive({drive!r}), deleteDrive()",
                     lambda: {"drive": drive, "messages": comp._send(
                         {}, [("setCurrentDrive", [drive]), ("deleteDrive", [])]).messages()})
+
+
+def _check_drive_add(ctx, vm):
+    comp = ctx.product_page(vm).component("drive")
+    if comp.tree.css_first("[wire\\:key='addNewDriveToRootserver']") is not None:
+        comp.require("addDrive")
+    return comp
+
+
+def _verify_drive_add(ctx, vm, result):
+    ctx.fresh(vm)
+    return any(d["drive"] not in result["drives_before"] for d in _drives(ctx, vm))
+
+
+@feature("drive-add", "change", "Add a CD drive to the VM (the panel's 'Weiteres Laufwerk'; the panel picks the slot). "
+         "A VM should have one CD drive: add one only when it has none, see `drives`",
+         verify=_verify_drive_add, check=_check_drive_add)
+def _drive_add(ctx, vm):
+    before = [d["drive"] for d in _drives(ctx, vm)]
+    comp = _check_drive_add(ctx, vm)
+    if comp.tree.css_first("[wire\\:key='addNewDriveToRootserver']") is None:
+        raise ServiceError(f"the panel offers no further drive for VM {vm} (it has {before})")
+    comp.require("addDrive")
+    return ctx.send(f"Livewire drive: addDrive() [drives now: {before}]",
+                    lambda: {"drives_before": before, "messages": comp._send({}, [("addDrive", [])]).messages()})

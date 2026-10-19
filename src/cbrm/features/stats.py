@@ -73,7 +73,7 @@ def _stats_history(ctx, vm, timeframe="hour", metric="cpu"):
             or any(not isinstance(s, list) or len(s) != len(labels) for s in series)):
         raise ContractError("statistics: labels and data no longer line up the way the panel's chart reads them")
     out = []
-    for name, values in zip(names, series):
+    for name, values in zip(names, series, strict=True):
         nums = [n for n in map(_num, values) if n is not None]
         out.append({"name": name, "min": min(nums, default=None), "max": max(nums, default=None),
                     "average": round(sum(nums) / len(nums), 2) if nums else None,

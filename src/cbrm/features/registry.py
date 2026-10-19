@@ -16,14 +16,16 @@ description instead of sending. `verify(ctx, vm, result, **args)` re-reads the p
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from ..errors import ServiceError
 from ..livewire import Page
 from ..panel import Panel
 
 RISKS = ("read", "secret", "change", "destroy")
+FILE_TYPES = {"png": "image/png", "pdf": "application/pdf"}  # features that return bytes, by `returns`
 
 
 @dataclass(frozen=True)
@@ -48,7 +50,7 @@ class Feature:
     params: tuple[Param, ...] = ()
     verify: Callable | None = None
     check: Callable | None = None
-    returns: str = "json"  # or "png"
+    returns: str = "json"  # or a file type: "png", "pdf" (bytes; the CLI writes them to --out)
     secret_result: bool = False
 
 
@@ -59,6 +61,8 @@ def feature(name: str, risk: str, help: str, params: tuple[Param, ...] = (), ret
             secret_result: bool = False, verify: Callable | None = None, check: Callable | None = None):
     if risk not in RISKS:  # not an assert: python -O must not let a paying or unknown class through
         raise ValueError(f"{name}: unknown risk class {risk!r}")
+    if returns != "json" and returns not in FILE_TYPES:
+        raise ValueError(f"{name}: unknown result type {returns!r}")
 
     def register(fn: Callable) -> Callable:
         REGISTRY[name] = Feature(name, risk, help, fn, params, verify, check, returns, secret_result)

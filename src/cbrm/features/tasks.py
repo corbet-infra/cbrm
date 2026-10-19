@@ -12,9 +12,8 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..errors import ContractError, ServiceError
-from .common import (get_json, panel_answer, panel_date, post_form, require_names, require_post, settle, text, tolerant)
+from .common import get_json, panel_answer, panel_date, post_form, require_names, require_post, settle, text, tolerant
 from .registry import Param, feature
-
 
 PANEL_TIME_ZONE = "Europe/Berlin"
 
@@ -63,8 +62,18 @@ def _read(comp, labels: dict[str, str] | None = None) -> list[dict]:
         for p in node.css("p.rootserver-task-p"):
             label, _, val = text(p).partition(":")
             facts[label.strip()] = val.strip()
-        out.append({"id": ids.pop(), "action": by_label.get(text(title), text(title)), "label": text(title),
-                    "repeat": facts.get("Wiederholung"), "next": panel_date(facts.get("Nächste Aktion"))})
+        bell = node.css_first("[data-task-id]")
+        notification = None
+        if bell is not None:
+            notification = {"mode": bell.attributes.get("data-mode") or "none",
+                            "email": bell.attributes.get("data-email") or None,
+                            "label": facts.get("E-Mail-Benachrichtigung")}
+        task_id = ids.pop()
+        if bell is not None and bell.attributes.get("data-task-id") != task_id:
+            raise ContractError(f"task: the notification button of task {task_id} names another task")
+        out.append({"id": task_id, "action": by_label.get(text(title), text(title)), "label": text(title),
+                    "repeat": facts.get("Wiederholung"), "next": panel_date(facts.get("Nächste Aktion")),
+                    "notification": notification})
     return out
 
 
@@ -73,7 +82,8 @@ def _tasks(ctx, vm) -> list[dict]:
     return _read(page.component("task"), _form_options(page)["methode"])
 
 
-@feature("tasks", "read", "The VM's scheduled tasks: id, action, repeat interval and next run (panel time)")
+@feature("tasks", "read", "The VM's scheduled tasks: id, action, repeat interval, next run (panel time) and the e-mail "
+         "notification (mode none, always or failed_only, and the address if not the account's)")
 def _tasks_feature(ctx, vm):
     return _tasks(ctx, vm)
 
@@ -120,7 +130,7 @@ def _task_create(ctx, vm, action, interval, start, notification_mode=None, notif
         if given not in options[field]:
             raise ServiceError(f"{name} must be one of {', '.join(options[field])}")
     try:
-        when = datetime.datetime.strptime(start.strip().replace("T", " "), "%Y-%m-%d %H:%M")
+        when = datetime.datetime.strptime(start.strip().replace("T", " "), "%Y-%m-%d %H:%M")  # noqa: DTZ007  panel wall-clock time
     except ValueError:
         raise ServiceError("start must look like 2026-10-14 03:30 (panel time, Europe/Berlin)") from None
     mode, email = (notification_mode or "").strip(), (notification_email or "").strip()
@@ -177,3 +187,69 @@ def _task_delete(ctx, vm, task):
     path = f"/customer/rootserver/{vm}/scheduled_task/delete/{found[0]['id']}"
     return ctx.send(f"GET {path} [{found[0]['label']}, {found[0]['repeat']}, next {found[0]['next']}]",
                     lambda: panel_answer(get_json(ctx, path)))
+
+
+# -- the e-mail notification of a task -----------------------------------------------------------------------
+
+def _notification_options(page) -> dict[str, str]:
+    """The panel's choices in the task notification dialog: value -> label ('' = no e-mail)."""
+    sel = page.tree.css_first("select#task_notification_mode_select")
+    if sel is None or page.tree.css_first("#task_notification_email") is None:
+        raise ContractError(f"{page.path}: the task notification dialog's fields are gone")
+    options = {o.attributes.get("value") or "": text(o) for o in sel.css("option")}
+    if "" not in options or len(options) < 2:
+        raise ContractError(f"{page.path}: the task notification dialog no longer offers 'no e-mail' and the modes")
+    return options
+
+
+def _check_notification(ctx, vm):
+    page = ctx.product_page(vm)
+    path = f"/customer/rootserver/{vm}/scheduled_task/notification/"
+    require_post(page, path, "notification_mode", "notification_email", suffixed=True)
+    options = _notification_options(page)
+    _read(page.component("task"))
+    return page, path, options
+
+
+@tolerant
+def _verify_notification(ctx, vm, result, task, notification_mode, notification_email=None):
+    def seen():
+        ctx.fresh(vm)
+        t = next((t for t in _tasks(ctx, vm) if t["id"] == result["task"]), None)
+        n = t and t["notification"]
+        return bool(n) and n["mode"] == result["mode"] and (n["email"] or "") == result["email"]
+    return result.get("state") == "success" and settle(seen)
+
+
+@feature("task-notification-set", "change",
+         "Set a scheduled task's e-mail notification (the panel's bell on the task): none, always or failed_only, "
+         "optionally to another address than the account's",
+         (Param("task", "the task's id from `tasks`"),
+          Param("notification_mode", "none, or the panel's own choices (always, failed_only)"),
+          Param("notification_email", "optional: send it to this address instead of the account's (needs a mode other "
+                                      "than none)", required=False)),
+         verify=_verify_notification, check=_check_notification)
+def _task_notification_set(ctx, vm, task, notification_mode, notification_email=None):
+    page, path, options = _check_notification(ctx, vm)
+    mode = notification_mode.strip()
+    mode = "" if mode == "none" else mode
+    modes = [m for m in options if m]
+    if mode not in options:
+        raise ServiceError(f"notification_mode must be none or one of {', '.join(modes)}")
+    email = (notification_email or "").strip()
+    if email and not mode:
+        raise ServiceError("notification_email needs a notification_mode other than none")
+    if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        raise ServiceError("notification_email must be an e-mail address")
+    tasks = _read(page.component("task"))
+    found = [t for t in tasks if t["id"] == str(task).strip()]
+    if not found:
+        raise ServiceError(f"VM {vm} has no task {task!r}; it has {[t['id'] for t in tasks]}")
+    if found[0]["notification"] is None:
+        raise ContractError(f"task: task {found[0]['id']} has no notification button")
+    data = {"notification_mode": mode, "notification_email": email}
+    target = f"{path}{found[0]['id']}"
+    return ctx.send(f"POST {target} {data} [{found[0]['label']}, {found[0]['repeat']}; was "
+                    f"{found[0]['notification']['mode']}]",
+                    lambda: {**panel_answer(post_form(ctx, page, target, data)), "task": found[0]["id"],
+                             "mode": mode or "none", "email": email})

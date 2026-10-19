@@ -1,0 +1,26 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"><title>node-fw | Netzwerk | BERO HOST</title></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;firewallId&quot;: 23, &quot;title&quot;: &quot;node-fw&quot;, &quot;policyIn&quot;: &quot;ACCEPT&quot;, &quot;policyOut&quot;: &quot;ACCEPT&quot;, &quot;rules&quot;: [[], {&quot;s&quot;: &quot;arr&quot;}], &quot;loadFailed&quot;: false, &quot;lockoutWarningFor&quot;: null}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.network.firewall-editor&quot;, &quot;path&quot;: &quot;customer/network/firewall/23&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.network.firewall-editor">
+
+<div class="col-12 col-xxl-8"><section class="bt-card"><form wire:submit="save">
+ <input type="text" class="form-control" id="firewallEditorTitle" wire:model="title" maxlength="100" placeholder="Name">
+ <div class="fw-direction" wire:key="firewall-direction-IN"><h3 class="bt-section-title m-0"> Eingehend </h3>
+  <select class="form-select" wire:model.live="policyIn" aria-label="Standardverhalten"><option value="DROP">Standard: alles blockieren</option><option value="ACCEPT">Standard: alles erlauben</option></select>
+  <p class="bt-muted small fst-italic mb-2">Noch keine Regeln.</p>
+  <button type="button" class="bt-btn-ghost btn-sm mt-1" wire:click="addRule('IN')"> Regel hinzufügen </button></div>
+ <div class="fw-direction" wire:key="firewall-direction-OUT"><h3 class="bt-section-title m-0"> Ausgehend </h3>
+  <select class="form-select" wire:model.live="policyOut" aria-label="Standardverhalten"><option value="DROP">Standard: alles blockieren</option><option value="ACCEPT">Standard: alles erlauben</option></select>
+  <p class="bt-muted small fst-italic mb-2">Noch keine Regeln.</p>
+  <button type="button" class="bt-btn-ghost btn-sm mt-1" wire:click="addRule('OUT')"> Regel hinzufügen </button></div>
+ <button class="bt-btn-primary" type="submit" wire:target="save"> Speichern &amp; anwenden </button>
+</form></section></div>
+<div class="col-12 col-xxl-4"><section class="bt-card"><h2 class="bt-card-title">Server</h2>
+ <div class="bt-row" wire:key="firewall-server-9001"><div class="text-break"><div class="fw-bold">node-1.example.test</div>
+  <small class="bt-muted d-block"><span class="bt-pill bt-pill--completed">nutzt diese Firewall</span></small></div>
+  <button class="bt-btn-ghost btn-sm" type="button" wire:click="unassignServer(9001)" wire:confirm="Firewall wirklich von node-1.example.test entfernen?"> Entfernen </button></div>
+ <div class="bt-row" wire:key="firewall-server-9003"><div class="text-break"><div class="fw-bold">node-3.example.test</div>
+  <small class="bt-muted d-block"><span class="bt-pill bt-pill--completed">nutzt diese Firewall</span></small></div>
+  <button class="bt-btn-ghost btn-sm" type="button" wire:click="unassignServer(9003)" wire:confirm="Firewall wirklich von node-3.example.test entfernen?"> Entfernen </button></div>
+</section></div>
+</div>
+</body></html>

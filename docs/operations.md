@@ -49,8 +49,13 @@ API) instead of guessing. To repair:
 ## Releasing
 
 1. Update `CHANGELOG.md` and the version in `pyproject.toml`, `src/cbrm/__init__.py` and `flake.nix`.
-2. `nix build` (runs the tests), commit, tag `vX.Y.Z` on the primary.
-3. Build from the tag and upload to PyPI: `git archive vX.Y.Z | tar -x -C <empty dir>`, there
-   `nix shell nixpkgs#python3Packages.build -c pyproject-build --outdir ../dist`, then `uv publish ../dist/*` with the
-   upload token in `UV_PUBLISH_TOKEN`. (twine 6.2 refuses the wheel's metadata version 2.5.)
+2. Gates: `pytest`, `ruff check .`, `nix build` (runs the tests), and `cbrm doctor <vm>` against the live panel.
+3. Commit, tag `vX.Y.Z` (signed) on the primary, push both.
+4. Build from the tag: `git archive vX.Y.Z | tar -x -C <empty dir>`, there `uv build --out-dir ../dist`; check the
+   metadata with `uvx twine check --strict ../dist/*` (twine 6.2 only reads metadata up to 2.4; if it refuses 2.5,
+   check the README rendering with `readme_renderer` instead).
+5. Create the Forgejo release for the tag with the wheel and the sdist attached, and upload to PyPI with
+   `uv publish ../dist/*`, the upload token in `UV_PUBLISH_TOKEN`.
+6. Check the upload: `uv tool run --from cbrm==X.Y.Z cbrm --version` in a clean environment.
+
 The mirrors follow the primary automatically.

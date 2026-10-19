@@ -3,28 +3,31 @@ Same rules as every other interface; with CBRM_API_URL set it is a client of a r
 and never sees the panel credential."""
 from __future__ import annotations
 
+import base64
 import inspect
 
 import anyio
 
 try:  # mcp >= 2 renamed FastMCP to MCPServer; the API used here is the same
-    from mcp.server.mcpserver import Image, MCPServer as _Server
+    from mcp.server.mcpserver import Image
+    from mcp.server.mcpserver import MCPServer as _Server
     from mcp.server.mcpserver.exceptions import ToolError
 except ImportError:  # mcp 1.x
-    from mcp.server.fastmcp import FastMCP as _Server, Image
+    from mcp.server.fastmcp import FastMCP as _Server
+    from mcp.server.fastmcp import Image
     from mcp.server.fastmcp.exceptions import ToolError
 
 from .client import backend
 from .errors import ContractError, PanelError, ServiceError
-from .features import REGISTRY, Feature
+from .features import FILE_TYPES, REGISTRY, Feature
 
 mcp = _Server("cbrm", instructions=(
     "Operate BERO HOST (bero-host.de) KVM rootservers through the customer panel and the VNC console. "
     "Read first. Every tool states its risk: change tools need confirm=<vm>, destroy tools also "
     "confirm_destroy=<vm>. dry_run=true shows what would be sent. cbrm never spends money. "
     "A 'panel changed' error means BERO altered the panel and the change was not made; report it, do not work around it. "
-    "bero_account_* tools act on the whole account (stored SSH keys, credit), not on one server: the VM allow-list "
-    "does not limit them. "
+    "bero_account_* tools act on the whole account (stored SSH keys, credit, tickets, networks, firewalls), not on "
+    "one server: the VM allow-list does not limit them. "
     "`system` in bero_status is the last template BERO installed, not necessarily what runs."))
 _b = None
 
@@ -61,7 +64,12 @@ def _tool(f: Feature):
             raise ToolError(f"the panel changed, so the change was not made: {e}") from e
         except (ServiceError, PanelError) as e:
             raise ToolError(f"refused: {e}" if isinstance(e, ServiceError) else f"panel error: {e}") from e
-        return Image(data=r, format="png") if isinstance(r, bytes) else r
+        if isinstance(r, bytes):
+            if f.returns == "png":
+                return Image(data=r, format="png")
+            # Other files (an invoice PDF): the bytes as base64, for the client to save; MCP has no file type for them
+            return {"type": FILE_TYPES[f.returns], "bytes": len(r), "base64": base64.b64encode(r).decode("ascii")}
+        return r
 
     tool.__name__ = "bero_" + f.name.replace("-", "_")
     tool.__doc__ = f"[{f.risk}] {f.help}."

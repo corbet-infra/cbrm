@@ -11,7 +11,7 @@ from __future__ import annotations
 import functools
 import re
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import httpx
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -65,16 +65,18 @@ def timestamp(s: str | None) -> str | None:
 
 # -- contract checks -------------------------------------------------------------------------------------
 
-def post_body(page: Page, path: str) -> str | None:
-    """The object literal the page's own `$.post(<path>, {…}, function …)` sends, or None if there is no such call."""
-    m = re.search(r"\$\.post\(\s*'(?:https?://[^'/]+)?" + re.escape(path) + r"'\s*,\s*\{(.*?)\}\s*,\s*function",
+def post_body(page: Page, path: str, suffixed: bool = False) -> str | None:
+    """The object literal the page's own `$.post(<path>, {…}, function …)` sends, or None if there is no such call.
+    `suffixed`: the script appends one variable to the path (`$.post('<path>' + id, {…}, …)`)."""
+    tail = r"'\s*\+\s*[A-Za-z_]\w*\s*," if suffixed else r"'\s*,"
+    m = re.search(r"\$\.post\(\s*'(?:https?://[^'/]+)?" + re.escape(path) + tail + r"\s*\{(.*?)\}\s*,\s*function",
                   page.html, re.S)
     return None if m is None else m.group(1)
 
 
-def require_post(page: Page, path: str, *fields: str) -> None:
+def require_post(page: Page, path: str, *fields: str, suffixed: bool = False) -> None:
     """The page's own script still POSTs exactly these fields (besides `_token`) to exactly this path."""
-    body = post_body(page, path)
+    body = post_body(page, path, suffixed)
     if body is None:
         raise ContractError(f"{page.path}: the panel no longer posts to {path}")
     keys = set(re.findall(r"(?m)(?:^|[{,])\s*([A-Za-z_]\w*)\s*:", body))

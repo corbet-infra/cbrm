@@ -1,0 +1,131 @@
+<!DOCTYPE html><html><head><meta name="csrf-token" content="TOKEN"><title>KVM Server: #1 (KVM Rootserver #2) | BERO HOST</title></head><body>
+<script src="https://bero-host.de/vendor/livewire/livewire.min.js" data-csrf="TOKEN" data-update-uri="https://bero-host.de/livewire-x/update"></script>
+<div wire:snapshot="{&quot;data&quot;: {&quot;serviceId&quot;: 2}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.service.activity-log&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.service.activity-log">
+
+<div class="nc-upgrade"><div class="sal-head"><h3><i class="fa-solid fa-clock-rotate-left me-1"></i> Aktivitäten</h3>
+<div class="nc-muted small">Wer hat wann was an diesem Produkt gemacht.</div></div>
+<ol class="sal-list">
+ <li class="sal-item sal-item-you" wire:key="service-activity-987"><span class="sal-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+  <div class="sal-body"><div class="sal-text"> <span class="sal-actor">Du</span> <span class="nc-muted">·</span> Aufgabe angelegt </div>
+  <div class="sal-date" title="19.10.2026 16:46"> vor 38 Minuten · 19.10.2026 16:46 </div></div></li>
+ <li class="sal-item" wire:key="service-activity-986"><span class="sal-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+  <div class="sal-body"><div class="sal-text"> <span class="sal-actor">Alex Example</span> <span class="nc-muted">·</span> Konsole genutzt </div>
+  <div class="sal-date" title="19.10.2026 02:30"> vor 14 Stunden · 19.10.2026 02:30 </div></div></li>
+ <li class="sal-item sal-item-you" wire:key="service-activity-652"><span class="sal-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+  <div class="sal-body"><div class="sal-text"> <span class="sal-actor">Du</span> <span class="nc-muted">·</span> Hostname geändert </div>
+  <div class="sal-date" title="18.10.2026 20:05"> vor 21 Stunden · 18.10.2026 20:05 </div></div></li>
+</ol></div>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [{&quot;id&quot;: 2}, {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.updates&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.updates">
+
+<p class="m-0"> Keine Updates ausstehend 💪 </p>
+<div wire:ignore.self class="modal fade" id="serverUpdatesModal" role="dialog" aria-labelledby="serverUpdatesModalLabel" aria-hidden="true">
+ <div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1 class="modal-title fs-5" id="serverUpdatesModalLabel"> Ausstehende Server Updates </h1></div>
+ <div class="modal-body"><div> </div></div>
+ <div class="modal-footer"><button type="button" data-bs-dismiss="modal"> Abbrechen </button>
+ <button id="installServerUpdatesButton" type="button" wire:click="installUpdates" wire:loading.attr="disabled" wire:target="installUpdates"><span>Updates installieren</span></button></div>
+ </div></div></div>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;product&quot;: [{&quot;id&quot;: 2}, {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.running-task&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.running-task">
+<div class="toast-container position-fixed bottom-0 end-0 p-3"> </div>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;rootserverId&quot;: 1, &quot;selectedFirewallId&quot;: &quot;23&quot;, &quot;template&quot;: &quot;linux&quot;, &quot;purpose&quot;: &quot;&quot;, &quot;mailHostname&quot;: &quot;&quot;, &quot;acceptTerms&quot;: false}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.firewall&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.firewall">
+
+<div class="rs-net-head"><h3><i class="fa-solid fa-shield-halved me-1"></i> Firewalls</h3>
+ <a class="ncd-action" href="https://bero-host.de/customer/network"> Verwalten </a></div>
+<div x-data="{ panel: null }"><div class="ncd-card ncd-card-active"><div class="ncd-icon"><i class="fa-solid fa-shield-halved"></i></div>
+ <div class="flex-grow-1"><span class="rs-net-label mb-1">Aktive Firewall</span><div class="ncd-name">node-fw</div></div>
+ <div class="ncd-actions"><a class="ncd-action ncd-action-primary" href="https://bero-host.de/customer/network/firewall/23"> Bearbeiten </a>
+ <button type="button" class="ncd-action ncd-action-danger" wire:click="unassign" wire:confirm="Möchtest du die Firewall wirklich von diesem Server entfernen?"> Entfernen </button></div>
+</div></div>
+<div class="nc-hint"><i class="fa-regular fa-clock"></i><div>Änderungen sind nach etwa 1 Minute aktiv.</div></div>
+<span class="rs-net-label mt-3">E-Mail-Ports</span>
+<div class="ncd-card ncd-card-active mb-1"><div class="ncd-icon"><i class="fa-solid fa-lock-open"></i></div>
+ <div class="flex-grow-1"><div class="ncd-name">E-Mail-Ports 25, 465, 587, 2525 freigeschaltet seit 18.10.2026</div></div></div>
+<div class="modal fade" id="mailUnlockModal" tabindex="-1" aria-hidden="true" wire:ignore.self=""><div class="modal-dialog"><div class="modal-content">
+ <div class="modal-header"><h1 class="modal-title fs-5" id="mailUnlockModalTitle">Freischaltung beantragen</h1></div>
+ <div class="modal-body"><form wire:submit="requestMailUnlock">
+  <p>Erzähl uns kurz, wofür du die Mail-Ports brauchst. Wir prüfen deinen Antrag und melden uns im Ticket.</p>
+  <textarea class="form-control" id="mailUnlockPurpose" wire:model="purpose" maxlength="2000"></textarea>
+  <input type="text" class="form-control" id="mailUnlockHostname" wire:model="mailHostname" maxlength="253" placeholder="mail.example.com">
+  <input type="checkbox" class="form-check-input" id="mailUnlockTerms" wire:model="acceptTerms">
+  <button type="submit" wire:target="requestMailUnlock"> Antrag senden </button>
+ </form></div></div></div></div>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;availableIsoSearch&quot;: &quot;&quot;, &quot;currentDrive&quot;: null, &quot;downloadUrl&quot;: &quot;&quot;, &quot;downloadUrlTitle&quot;: &quot;&quot;, &quot;paginators&quot;: [], &quot;product&quot;: [{&quot;id&quot;: 2}, {&quot;s&quot;: &quot;arr&quot;}], &quot;queryUrlMetaData&quot;: false, &quot;showDownloadForm&quot;: false}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.drive&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.drive">
+
+<div class="d-none"><button wire:click="updateDrivesContent">Update</button></div>
+<div class="d-flex justify-content-center flex-wrap">
+ <div class="rootserver-backup-container rootserver-backup-item p-4" wire:key="existingDriveFromRootserveride2">
+  <h3><i class="fa-solid fa-hard-drive"></i> <span class="ps-2">Laufwerk ide2</span></h3>
+  <div><div><p class="m-1 rootserver-backup-p"> Leer </p></div></div>
+  <div class="d-flex"><div class="m-1"><button class="btn default-button" type="button" wire:click="setCurrentDrive('ide2')" data-bs-target="#mountIsoModal"> ISO einlegen </button></div>
+  <div class="m-1"><button class="btn default-button-secondary" type="button" wire:click="setCurrentDrive('ide2')" data-bs-target="#deleteDriveModal"> Löschen </button></div></div>
+ </div>
+ <div class="rootserver-backup-container rootserver-backup-item-new p-4" wire:click="addDrive" wire:key="addNewDriveToRootserver">
+  <div><i class="fa-solid fa-plus fa-3x"></i><p class="m-0"> Weiteres Laufwerk </p></div></div>
+</div>
+<button type="button" wire:click.prevent="deleteDrive()">Laufwerk löschen</button>
+<button type="button" wire:click="unmountIso()">ISO auswerfen</button>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;paginators&quot;: [], &quot;product&quot;: [{&quot;id&quot;: 2}, {&quot;s&quot;: &quot;arr&quot;}], &quot;taskSearch&quot;: &quot;&quot;}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.task&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.task">
+
+<div class="d-flex justify-content-center flex-wrap">
+ <div class="rootserver-task-container rootserver-task-item p-4">
+  <h3><i class="fa-solid fa-database"></i> <span class="ps-2">Backup erstellen</span></h3>
+  <div><div><p class="m-1 rootserver-task-p"> Wiederholung: Wöchentlich </p></div>
+  <div><p class="m-1 rootserver-task-p"> Nächste Aktion: 26.10.2026 01:42 </p></div>
+  <div><p class="m-1 rootserver-task-p"> E-Mail-Benachrichtigung: Nur bei Fehlern </p></div></div>
+  <div class="d-flex justify-content-end"><div class="m-1"><button class="btn default-button-secondary" type="button" title="E-Mail-Benachrichtigung"
+   data-task-id="7001" data-mode="failed_only" data-email="" onclick="showTaskNotificationModal(this);"><i class="fa-solid fa-bell"></i></button></div>
+  <div class="m-1"><button class="btn default-button-secondary" type="button" onclick="showDeleteTaskModal(7001);"> Löschen </button></div></div>
+ </div>
+ <div class="rootserver-task-container rootserver-task-item-new p-4" onclick="newTask();"><div><i class="fa-solid fa-plus fa-3x"></i><p class="m-0"> Neue Aufgabe </p></div></div>
+</div>
+</div>
+<div wire:snapshot="{&quot;data&quot;: {&quot;logSearch&quot;: &quot;&quot;, &quot;logSearchInputVisible&quot;: false, &quot;paginators&quot;: {&quot;logPage&quot;: 1}, &quot;product&quot;: [{&quot;id&quot;: 2}, {&quot;s&quot;: &quot;arr&quot;}]}, &quot;memo&quot;: {&quot;id&quot;: &quot;fixture&quot;, &quot;name&quot;: &quot;customerarea.products.rootserver.logs-table&quot;, &quot;path&quot;: &quot;customer/products/2&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;release&quot;: &quot;a-a-a&quot;, &quot;children&quot;: [], &quot;scripts&quot;: [], &quot;assets&quot;: [], &quot;errors&quot;: [], &quot;locale&quot;: &quot;de&quot;, &quot;islands&quot;: []}, &quot;checksum&quot;: &quot;0000000000000000000000000000000000000000000000000000000000000000&quot;}" wire:effects="[]" wire:id="fixture" wire:name="customerarea.products.rootserver.logs-table">
+<h2 class="m-0 mb-2"> Logs | <i class="fa-solid fa-magnifying-glass fs-4" wire:click="toggleLogSearchInput"></i>
+<input wire:model.live="logSearch" type="text" placeholder="Logs durchsuchen" id="logSeachInput" class="form-control"></h2>
+ <div class="mt-2 mb-2 grey-transparent-background"><div class="d-flex flex-row p-3 align-items-center responsive-flex-table-container">
+  <div class="ps-xl-2"><b class="d-inline d-xl-none">Status: </b><i class="fa-solid fa-circle text-danger "></i></div>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Datum : </b>08.10.2026 | 12:46 Uhr </p>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Aktion: </b>Starten </p></div></div>
+ <div class="mt-2 mb-2 grey-transparent-background"><div class="d-flex flex-row p-3 align-items-center responsive-flex-table-container">
+  <div class="ps-xl-2"><b class="d-inline d-xl-none">Status: </b><i class="fa-solid fa-circle text-success "></i></div>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Datum : </b>08.10.2026 | 12:46 Uhr </p>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Aktion: </b>Starten </p></div></div>
+ <div class="mt-2 mb-2 grey-transparent-background"><div class="d-flex flex-row p-3 align-items-center responsive-flex-table-container">
+  <div class="ps-xl-2"><b class="d-inline d-xl-none">Status: </b><i class="fa-solid fa-circle text-success "></i></div>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Datum : </b>08.10.2026 | 12:26 Uhr </p>
+  <p class="m-0 fs-6"><b class="d-inline d-xl-none">Aktion: </b>Rootserver installieren </p></div></div>
+
+<nav><ul class="pagination"><li class="page-item active" wire:key="paginator-logPage-page-1"><span class="page-link">1</span></li>
+<li class="page-item" wire:key="paginator-logPage-page-2"><button type="button" class="page-link" wire:click="gotoPage(2, 'logPage')">2</button></li>
+<li class="page-item"><button type="button" class="page-link" wire:click="nextPage('logPage')" rel="next">&rsaquo;</button></li></ul></nav>
+</div>
+<form onsubmit="return createTaskFunction();"><input type="hidden" name="username">
+ <select class="form-select" id="create_task_method_select" name="methode" aria-label="Methode"><option value="dump">Backup erstellen</option>
+  <option value="start">Starten</option><option value="restart">Neustarten</option><option value="shutdown">Stoppen</option><option value="stop">Killen</option></select>
+ <select class="form-select" id="create_task_interval_select" name="interval" aria-label="interval"><option value="daily">Täglich</option>
+  <option value="weekly">Wöchentlich</option><option value="monthly">Monatlich</option></select>
+ <input type="datetime-local" class="form-control" id="next_execution_at_create_task" name="next_execution_at" required>
+ <select class="form-select" id="create_task_notification_mode_select" name="notification_mode" aria-label="notification_mode">
+  <option value="">Keine E-Mail</option><option value="always">Immer (erfolgreich &amp; fehlgeschlagen)</option><option value="failed_only">Nur bei Fehlern</option></select>
+ <input type="email" class="form-control" id="create_task_notification_email" name="notification_email">
+</form>
+<select class="form-select" id="task_notification_mode_select" aria-label="notification_mode">
+ <option value="">Keine E-Mail</option><option value="always">Immer (erfolgreich &amp; fehlgeschlagen)</option><option value="failed_only">Nur bei Fehlern</option></select>
+<input type="email" class="form-control" id="task_notification_email">
+<script>
+    function saveTaskNotification() {
+        $.post('https://bero-host.de/customer/rootserver/1/scheduled_task/notification/' + taskNotificationTaskId, {
+            _token: 'TOKEN',
+            notification_mode: document.getElementById('task_notification_mode_select').value,
+            notification_email: document.getElementById('task_notification_email').value,
+        }, function (response) {
+            if (response.state == 'success') { createBeroSuccessToast(response.message); }
+        }, 'json');
+        return false;
+    }
+</script>
+</body></html>

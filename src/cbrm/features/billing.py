@@ -9,7 +9,6 @@ from ..errors import ContractError
 from .common import account_page, require_element, text, value
 from .registry import feature
 
-
 # What the panel prints for the payment: "42,00 € via PayPal (<the payer's account, an e-mail address>)". Only
 # the amount and the method's name are kept; the method is plain words (no digits, '@' or dots: nothing that
 # could identify an account), whatever follows is dropped, and a line in another shape yields no payment.

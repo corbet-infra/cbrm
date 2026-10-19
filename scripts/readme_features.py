@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
-from cbrm.features import REGISTRY  # noqa: E402
+from cbrm.features import REGISTRY
 
 ORDER = {"read": 0, "secret": 1, "change": 2, "destroy": 3}
 rows = ["| Feature | Risk | Arguments | What it does |", "|---|---|---|---|"]

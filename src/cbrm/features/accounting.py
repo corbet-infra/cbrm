@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import re
 
-from ..errors import ContractError, ServiceError
+import httpx
+
+from ..errors import ContractError, PanelError, ServiceError
 from .common import panel_date, site_page
 from .common import text as squash
 from .registry import Param, feature
@@ -80,3 +82,47 @@ feature("account-orders", "read", "Orders of the account (account-wide): product
 feature("account-transactions", "read",
         "Credit transactions of the account (account-wide): description, amount (negative = spent), date, status",
         PARAMS, check=_trx_check)(_trx)
+
+
+# -- invoice PDFs -------------------------------------------------------------------------------------------
+
+DOWNLOAD = "/customer/rechnungen/herunterladen/"
+_INVOICE = re.compile(r"[0-9A-Za-z][0-9A-Za-z-]{0,39}")
+
+
+def _invoice_links(comp) -> dict[str, str]:
+    """Invoice number -> the path of its download link, from the invoices table's rows."""
+    out = {}
+    for a in comp.tree.css(f"a[href*='{DOWNLOAD}']"):
+        path = httpx.URL(a.attributes.get("href") or "").path
+        number = path.removeprefix(DOWNLOAD)
+        if not path.startswith(DOWNLOAD) or not _INVOICE.fullmatch(number):
+            raise ContractError(f"{PAGE}: an invoice download link cbrm cannot read")
+        out[number] = path
+    return out
+
+
+def _check_invoice_pdf(ctx, vm):
+    comp = _component(ctx, vm, "invoices-table").require(models=("searchInvoices",))
+    rows, links = _rows(comp), _invoice_links(comp)
+    if rows and not links:
+        raise ContractError(f"{PAGE}: the invoices have no download links")
+
+
+@feature("account-invoice-download", "read",
+         "One invoice as PDF (account-wide): the panel's download of an invoice number from `account-invoices`",
+         (Param("invoice", "the invoice number from `account-invoices`"),), returns="pdf", check=_check_invoice_pdf)
+def _account_invoice_download(ctx, vm, invoice):
+    number = str(invoice).strip()
+    if not _INVOICE.fullmatch(number):
+        raise ServiceError("an invoice is addressed by its number from `account-invoices`")
+    comp = _component(ctx, vm, "invoices-table").require(models=("searchInvoices",))
+    links = _invoice_links(comp)
+    if number not in links:  # not on the first page: let the panel's own search find it
+        links = _invoice_links(comp._send({"searchInvoices": number}, []))
+    if number not in links:
+        raise ServiceError(f"the account has no invoice {number!r} (see `account-invoices`)")
+    body, kind = ctx.panel.download(links[number])
+    if not body.startswith(b"%PDF"):
+        raise PanelError(f"invoice {number}: the panel sent {kind or 'something'} instead of a PDF")
+    return body

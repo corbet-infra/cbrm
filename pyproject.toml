@@ -4,21 +4,42 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cbrm"
-version = "0.5.2"
-description = "BERO HOST management: the customer panel and its VNC console, as a library and a CLI"
+version = "0.6.0"
+description = "Manage BERO HOST servers from the terminal, from code and from AI assistants: the customer panel and its VNC console as a CLI, an HTTP API, an MCP server and a Python library"
 readme = "README.md"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
 license-files = ["LICENSE", "LICENSE.md", "LICENSES/*"]
 authors = [{ name = "Julian Y. Richard Corbet" }]
-keywords = ["bero-host", "bero", "kvm", "vps", "rootserver", "proxmox", "novnc", "mcp", "cli", "hosting"]
-classifiers = ["Programming Language :: Python :: 3", "Environment :: Console", "Intended Audience :: System Administrators", "Topic :: System :: Systems Administration"]
+keywords = ["bero-host", "bero", "kvm", "vps", "rootserver", "proxmox", "novnc", "vnc", "mcp", "cli", "hosting",
+            "livewire", "firewall", "rdns", "automation", "devops"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Systems Administration",
+]
 requires-python = ">=3.11"
 dependencies = ["httpx>=0.27", "selectolax>=0.3.21", "websockets>=12", "vncdotool>=1.2", "pillow>=10", "mcp>=1.2", "fastapi>=0.110", "uvicorn>=0.29",
                 "tzdata; sys_platform == 'win32'"]  # zoneinfo has no system database there
 
 [project.urls]
-Homepage = "https://git.corbet.ch/corbet-infra/cbrm"
-Issues = "https://git.corbet.ch/corbet-infra/cbrm/issues"
+Homepage = "https://forge.corbet.ch/corbet-infra/cbrm"
+Documentation = "https://forge.corbet.ch/corbet-infra/cbrm/wiki"
+Repository = "https://forge.corbet.ch/corbet-infra/cbrm"
+Issues = "https://forge.corbet.ch/corbet-infra/cbrm/issues"
+Changelog = "https://forge.corbet.ch/corbet-infra/cbrm/src/branch/main/CHANGELOG.md"
+Releases = "https://forge.corbet.ch/corbet-infra/cbrm/releases"
 
 [project.scripts]
 cbrm = "cbrm.cli:main"
@@ -26,3 +47,15 @@ cbrm-mcp = "cbrm.mcp:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle errors, import order, bugbear, pyupgrade; Depends() in defaults is FastAPI's own idiom
+select = ["E4", "E7", "E9", "F", "W", "I", "B", "UP", "BLE", "DTZ", "RUF100"]
+ignore = ["B008", "E741"]  # E741: `l` for a line is this code's convention
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["DTZ", "BLE", "E702"]

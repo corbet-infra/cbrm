@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from cbrm.errors import ContractError, PanelError, ServiceError
-from cbrm.features import REGISTRY, tickets
+from cbrm.features import REGISTRY
 from cbrm.service import Service
 
 FIX = Path(__file__).parent / "fixtures"
@@ -186,7 +186,8 @@ def test_risk_classes():
     risks = {n: REGISTRY[n].risk for n in REGISTRY if n.startswith(("account-ticket", "account-network", "account-firewall"))}
     assert risks["account-network-delete"] == "destroy"
     changing = {"account-ticket-create", "account-ticket-reply", "account-ticket-close", "account-network-create",
-                "account-network-edit", "account-network-server-add", "account-network-server-remove"}
+                "account-network-edit", "account-network-server-add", "account-network-server-remove",
+                "account-firewall-create", "account-firewall-edit", "account-firewall-server-remove"}
     assert {n for n, r in risks.items() if r == "change"} == changing
     assert all(r == "read" for n, r in risks.items() if n not in changing | {"account-network-delete"})
     for name in changing | {"account-network-delete"}:
@@ -477,7 +478,7 @@ def test_panel_changes_are_contract_errors_and_send_nothing(tmp_path):
 def test_doctor_checks_the_new_features(svc):
     new = [n for n in REGISTRY if n.startswith(("account-ticket", "account-network", "account-firewall", "account-inv",
                                                   "account-ord", "account-trans"))]
-    assert len(new) == 16
+    assert len(new) == 20  # 0.6.0: account-invoice-download and account-firewall-create, -edit, -server-remove
     report = svc.check("1")
     assert {n: report[n] for n in new} == {n: "ok" for n in new}
 
@@ -492,7 +493,14 @@ def test_doctor_reports_a_changed_panel(tmp_path):
 
 
 def test_fixtures_hold_no_account_data():
+    """Every recorded rendering is anonymised: no names of our servers, no addresses outside the documentation ranges,
+    no e-mail address outside example domains, no customer number."""
+    import re
     for f in FIX.glob("*.html"):
-        if f.name.startswith(("network", "ticket", "firewall", "accounting")):
-            body = f.read_text().lower()
-            assert not any(w in body for w in ("corbet", "k8s", "fra-", "@", "kd-nr")), f.name
+        body = f.read_text().lower()
+        assert not any(w in body for w in ("corbet", "k8s", "fra-", "kd-nr", "kundennummer", "julian")), f.name
+        emails = set(re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", body))
+        assert all(e.endswith(("@example.test", "@example.org", "@example.com", "@openssh.com")) for e in emails), (f.name, emails)
+        for ip in re.findall(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])", body):
+            assert ip.startswith(("10.", "127.", "192.0.2.", "198.51.100.", "203.0.113.", "0.", "255.")), (f.name, ip)
+        assert not re.search(r"\b2a0[0-9a-f]:", body), f.name

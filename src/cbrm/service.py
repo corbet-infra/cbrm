@@ -10,8 +10,15 @@ from .errors import ServiceError
 from .features import REGISTRY, Ctx, Feature
 from .panel import Panel
 
-
 ACCOUNT = "account"  # stands for "no particular VM" in account-wide features
+
+
+def feature_list() -> list[dict]:
+    """Every feature with its risk class and parameters (what `cbrm features` and `GET /features` show)."""
+    return [{"name": f.name, "risk": f.risk, "help": f.help, "returns": f.returns,
+             "params": [{"name": p.name, "help": p.help, "type": p.type.__name__, "required": p.required,
+                         "multiple": p.multiple, "choices": list(p.choices), "secret": p.secret} for p in f.params]}
+            for f in REGISTRY.values()]
 
 
 class Service:
@@ -28,13 +35,10 @@ class Service:
     def _audit(self, line: str) -> None:
         fd = os.open(self.audit_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a") as f:
-            f.write(f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ} {line}\n")
+            f.write(f"{datetime.datetime.now(datetime.UTC):%Y-%m-%dT%H:%M:%SZ} {line}\n")
 
     def features(self) -> list[dict]:
-        return [{"name": f.name, "risk": f.risk, "help": f.help, "returns": f.returns,
-                 "params": [{"name": p.name, "help": p.help, "type": p.type.__name__, "required": p.required,
-                             "multiple": p.multiple, "choices": list(p.choices), "secret": p.secret} for p in f.params]}
-                for f in REGISTRY.values()]
+        return feature_list()
 
     def vms(self) -> list[dict]:
         return [self.panel.status(v) for v in sorted(self.panel.products()) if not self.allow or v in self.allow]
@@ -137,7 +141,7 @@ class Service:
             try:
                 v = f.verify(ctx, vm, result, **a)
                 out["verified"] = None if v is None else bool(v)  # None stays "unknown"
-            except Exception as e:  # the change was sent: never report a verification problem as "not sent"
+            except Exception as e:  # noqa: BLE001  the change was sent: never report a verification problem as "not sent"
                 out["verify_error"] = f"{type(e).__name__}: {e}"
             self._audit(f"{f.name} {vm} verified={out['verified']}" + (f" ({out['verify_error']})" if "verify_error" in out else ""))
         return out
@@ -161,6 +165,6 @@ class Service:
                     out[f.name] = "untested"
                     continue
                 out[f.name] = "ok"
-            except Exception as e:  # doctor reports, it never crashes: that is when the panel changed
+            except Exception as e:  # noqa: BLE001  doctor reports, it never crashes: that is when the panel changed
                 out[f.name] = f"BROKEN: {type(e).__name__}: {e}"
         return out

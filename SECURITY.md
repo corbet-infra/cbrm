@@ -1,7 +1,7 @@
 # Security
 
 Please report vulnerabilities privately: open a confidential issue on
-[git.corbet.ch/corbet-infra/cbrm](https://git.corbet.ch/corbet-infra/cbrm/issues) or mail the
+[forge.corbet.ch/corbet-infra/cbrm](https://forge.corbet.ch/corbet-infra/cbrm/issues) or mail the
 maintainer listed there. Do not file them on the mirrors.
 
 Design notes:

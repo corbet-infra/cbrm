@@ -1,7 +1,7 @@
 """cbrm — BERO HOST management. `Panel` drives the customer panel, `Console` its VNC console."""
+from .console import Console
 from .errors import ContractError, PanelError, ServiceError
 from .panel import Panel
-from .console import Console
 
 __all__ = ["Panel", "PanelError", "ContractError", "ServiceError", "Console"]
-__version__ = "0.5.2"
+__version__ = "0.6.0"

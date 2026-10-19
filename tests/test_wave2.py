@@ -153,7 +153,7 @@ def test_addresses_and_rdns_state(svc):
 
 def test_backups_and_slots(tmp_path, svc):
     assert svc.run("backups", "1") == {"backups": [{"id": "9001", "title": "Geplantes Backup", "size": "300.00GB",
-                                                    "date": "07.10.2026 13:50"}], "free_slots": 2}
+                                                    "date": "07.10.2026 13:50", "protected": None}], "free_slots": 2}
     assert svc.run("automatic-backup-status", "1") == {"enabled": True, "last": "07.10.2026 13:50", "next": "14.10.2026 13:50"}
     empty = svc_for(tmp_path, EMPTY)
     assert empty.run("backups", "1") == {"backups": [], "free_slots": 3}
@@ -162,7 +162,7 @@ def test_backups_and_slots(tmp_path, svc):
 
 def test_tasks(tmp_path, svc):
     assert svc.run("tasks", "1") == [{"id": "7001", "action": "dump", "label": "Backup erstellen",
-                                      "repeat": "Wöchentlich", "next": "14.10.2026 13:50"}]
+                                      "repeat": "Wöchentlich", "next": "14.10.2026 13:50", "notification": None}]
     assert svc_for(tmp_path, EMPTY).run("tasks", "1") == []
 
 

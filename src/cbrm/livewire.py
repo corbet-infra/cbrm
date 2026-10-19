@@ -28,9 +28,9 @@ class Page:
         if meta is None or update is None:
             raise ContractError(f"{path}: no Livewire on this page (CSRF token or update URI missing)")
         self.csrf, self.update_uri = meta.attributes["content"], update.attributes["data-update-uri"]
-        self._components: dict[str, "Component"] = {}
+        self._components: dict[str, Component] = {}
 
-    def component(self, suffix: str) -> "Component":
+    def component(self, suffix: str) -> Component:
         """The component whose name is `suffix` or ends in `.suffix`, rendered (lazy ones are loaded). A page loads
         each component once: a Component never changes (a call returns a new one), so `ctx.fresh(vm)` (a new Page)
         is how to see the panel's state after a change."""
@@ -78,7 +78,7 @@ class Component:
     def offers(self, method: str) -> bool:
         return re.search(r'wire:(?:click|submit)[\w.]*="' + re.escape(method) + r"\b", self.html) is not None
 
-    def require(self, *methods: str, models: tuple[str, ...] = ()) -> "Component":
+    def require(self, *methods: str, models: tuple[str, ...] = ()) -> Component:
         missing = [f"method {m}" for m in methods if not self.offers(m)]
         missing += [f"field {m}" for m in models
                     if not re.search(r'wire:model[\w.]*="' + re.escape(m) + '"', self.html)]
@@ -86,16 +86,16 @@ class Component:
             raise ContractError(f"{self.name}: the panel no longer offers {', '.join(missing)}")
         return self
 
-    def set(self, **updates) -> "Component":
+    def set(self, **updates) -> Component:
         self.require(models=tuple(updates))
         return self._send(updates, [])
 
-    def call(self, *calls: tuple[str, list], updates: dict | None = None) -> "Component":
+    def call(self, *calls: tuple[str, list], updates: dict | None = None) -> Component:
         """One request with model updates and method calls, e.g. call(("setCurrentDrive", ["ide0"]), ("unmountIso", []))."""
         self.require(*(m for m, _ in calls), models=tuple(updates or ()))
         return self._send(updates or {}, list(calls))
 
-    def _send(self, updates: dict, calls: list[tuple[str, list]]) -> "Component":
+    def _send(self, updates: dict, calls: list[tuple[str, list]]) -> Component:
         p = self.page
         r = p.panel.http.post(p.update_uri, headers={"X-Livewire": "true", "X-CSRF-TOKEN": p.csrf}, json={
             "_token": p.csrf,

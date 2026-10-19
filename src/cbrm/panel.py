@@ -14,12 +14,11 @@ from pathlib import Path
 import httpx
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-BASE = "https://bero-host.de"
-POWER_ACTIONS = ("start", "stop", "shutdown", "restart")
-
-
 from .errors import ContractError, PanelError
 from .livewire import Page
+
+BASE = "https://bero-host.de"
+POWER_ACTIONS = ("start", "stop", "shutdown", "restart")
 
 
 @dataclass
@@ -52,7 +51,7 @@ class Panel:
             pass  # no or unreadable session file: log in afresh
         self._lock = threading.RLock()  # `cbrm serve` handles requests in threads: one login, one product scan
         self.http = httpx.Client(base_url=BASE, cookies=jar, timeout=60,
-                                 headers={"User-Agent": "cbrm (+https://git.corbet.ch/corbet-infra/cbrm)"})
+                                 headers={"User-Agent": "cbrm (+https://forge.corbet.ch/corbet-infra/cbrm)"})
         self._products: dict[str, str] | None = None
         self._names: dict[str, str] = {}  # VM id -> the product's display name in the panel
 
@@ -90,6 +89,11 @@ class Panel:
     def page(self, path: str) -> str:
         """GET a panel page, logging in again when the session has expired."""
         return self._get(path).text
+
+    def download(self, path: str) -> tuple[bytes, str]:
+        """GET a file the panel offers (an invoice PDF): its bytes and content type."""
+        r = self._get(path)
+        return r.content, r.headers.get("content-type", "")
 
     # -- reading -----------------------------------------------------------------------------
     def products(self) -> dict[str, str]:

@@ -9,8 +9,21 @@ from __future__ import annotations
 import re
 
 from ..errors import ContractError, ServiceError
-from .common import (clean, get_json, limits, ok, panel_answer, panel_date, post_form, require_post, settle, text,
-                     timestamp, tolerant, value)
+from .common import (
+    clean,
+    get_json,
+    limits,
+    ok,
+    panel_answer,
+    panel_date,
+    post_form,
+    require_post,
+    settle,
+    text,
+    timestamp,
+    tolerant,
+    value,
+)
 from .registry import Param, feature
 
 
@@ -34,8 +47,10 @@ def _read(comp) -> dict:
         for p in node.css("p.rootserver-backup-p"):
             label, _, val = text(p).partition(":")
             facts[label.strip()] = val.strip()
+        shield = node.css_first(".rootserver-backup-protect")  # protected backups are not replaced by scheduled ones
         items.append({"id": ids.pop(), "title": text(title), "size": facts.get("Größe"),
-                      "date": panel_date(facts.get("Datum"))})
+                      "date": panel_date(facts.get("Datum")),
+                      "protected": None if shield is None else "is-protected" in (shield.attributes.get("class") or "").split()})
     free = len(comp.tree.css(".rootserver-backup-item-new"))
     if not items and not free:
         raise ContractError("backup: neither backups nor 'new backup' tiles found in the rendering")
@@ -74,7 +89,8 @@ def _gone(ctx, vm, backup) -> bool:
 
 # -- reading -----------------------------------------------------------------------------------------
 
-@feature("backups", "read", "The VM's backups (id, title, size, date; panel time) and how many backup slots are free")
+@feature("backups", "read", "The VM's backups (id, title, size, date in panel time, protected: not replaced by scheduled "
+         "backups) and how many backup slots are free")
 def _backups(ctx, vm):
     return _read(_component(ctx, vm))
 
