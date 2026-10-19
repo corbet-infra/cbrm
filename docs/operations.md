@@ -6,7 +6,7 @@ Prefer `CBRM_CREDENTIALS_CMD` over the two plain variables: the password then st
 store and only exists in the process that needs it. cbrm never prints it and never passes it as a
 command-line argument.
 
-## Running the API for a team or for assistants
+## Running the API for a team or for agents
 
 ```sh
 export CBRM_CREDENTIALS_CMD="pass show hosting/bero-host"
@@ -48,7 +48,8 @@ API) instead of guessing. To repair:
 
 ## Releasing
 
-1. Update `CHANGELOG.md` and the version in `pyproject.toml`, `src/cbrm/__init__.py` and `flake.nix`.
+1. Update `CHANGELOG.md` and the version in `pyproject.toml`, `src/cbrm/__init__.py` and `flake.nix`, then
+   regenerate the command reference: `python scripts/command_reference.py`.
 2. Gates: `pytest`, `ruff check .`, `nix build` (runs the tests), and `cbrm doctor <vm>` against the live panel.
 3. Commit, tag `vX.Y.Z` (signed) on the primary, push both.
 4. Build from the tag: `git archive vX.Y.Z | tar -x -C <empty dir>`, there `uv build --out-dir ../dist`; check the
@@ -57,5 +58,6 @@ API) instead of guessing. To repair:
 5. Create the Forgejo release for the tag with the wheel and the sdist attached, and upload to PyPI with
    `uv publish ../dist/*`, the upload token in `UV_PUBLISH_TOKEN`.
 6. Check the upload: `uv tool run --from cbrm==X.Y.Z cbrm --version` in a clean environment.
+7. Copy `docs/command-reference.md` to the wiki's `Command-reference.md`.
 
 The mirrors follow the primary automatically.

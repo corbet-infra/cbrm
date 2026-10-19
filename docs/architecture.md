@@ -5,7 +5,7 @@ cbrm.panel      Panel      login/session, server-rendered pages, panel JSON endp
 cbrm.livewire   Page/Component  Livewire calls with contract checks (require methods/fields/endpoints)
 cbrm.console    Console    the VNC console: Proxmox noVNC websocket ⇄ local TCP ⇄ vncdotool
       ▼
-cbrm.features   REGISTRY   every operation: name, risk class, parameters, run, verify, check
+cbrm.features   REGISTRY   every operation: name, risk class, summary, help, parameters, run, verify, check
       ▼
 cbrm.service    Service    the rules for every feature: allow-list, confirmations per risk class,
                            dry run, audit log, verification; `check` = doctor
@@ -28,7 +28,8 @@ which a dry run turns into a description.
 | `verify` | after a change, the panel does not show the effect → `verified: false` (CLI exit 4); cannot tell, or nothing to re-read → `verified: null` |
 | `cbrm doctor` | runs every feature's check read-only → `ok` / `BROKEN: reason` |
 
-Account-wide features (`account-*`) read `/customer/account` instead of a product page. The VM argument
+Account-wide features (`account-*`, `Feature.scope == "account"`) read `/customer/account` instead of a product
+page. The VM argument
 only names the account context: the allow-list and the confirmations of `Service` decide which VM may name it, but
 they do not scope the effect. These features are **not limited by the VM allow-list**; they act on the whole account.
 Since 0.5.1 the VM may be left out (`Service._context_vm` picks the first allowed VM, else the lowest number; the

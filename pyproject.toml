@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cbrm"
 version = "0.6.0"
-description = "Manage BERO HOST servers from the terminal, from code and from AI assistants: the customer panel and its VNC console as a CLI, an HTTP API, an MCP server and a Python library"
+description = "CLI, HTTP API, MCP server and Python library for the BERO HOST customer panel and its VNC console"
 readme = "README.md"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
 license-files = ["LICENSE", "LICENSE.md", "LICENSES/*"]
