@@ -31,6 +31,36 @@ above, `StateDirectory=cbrm` and `Environment=XDG_STATE_HOME=%S`.
 | `cookies.json` | the panel session (0600); delete it to force a fresh login |
 | `audit.log` | one line per changing request and its result, UTC |
 
+## Desired state: scheduled tasks
+
+The panel keeps no declaration of its own. A fleet keeps one in a TOML file and lets cbrm compare and converge:
+
+```toml
+schema = 1
+
+[vms.10001]
+machine = "web-01"                  # optional, for people only
+[[vms.10001.tasks]]
+action = "dump"                     # the values task-create takes
+interval = "weekly"
+weekday = "monday"                  # weekly and 2-weeks only
+time = "01:42"                      # panel time (Europe/Berlin)
+notification_mode = "failed_only"   # none (default), always, failed_only
+```
+
+```sh
+cbrm plan tasks.toml                                     # reads only: the steps, or `no change`
+cbrm plan machines/*/panel.toml                          # several files form one state (a VM in one only)
+cbrm apply tasks.toml --confirm 10001 --confirm-destroy 10001
+```
+
+Every listed VM's task list is complete: `apply` creates what is missing, sets a differing e-mail notification and
+deletes what is not declared (new tasks first, deletions last, so a moved backup never lapses); a VM that is not listed
+is not touched. A task matches by action, interval, weekday and time of its next run. `apply` plans afresh and changes
+nothing unless every VM the plan changes is repeated in `--confirm`, and every VM it creates a task on also in
+`--confirm-destroy`; each step is the ordinary feature with its checks, audit line and verification, and the run stops
+at the first step the panel does not show (exit 4).
+
 ## Checks before acting on a cluster member
 
 cbrm acts on one server; it does not know your cluster. Before stopping or restarting a member, make

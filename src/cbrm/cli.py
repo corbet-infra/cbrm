@@ -50,6 +50,19 @@ def _parser() -> argparse.ArgumentParser:
                    description="Check read-only, for every feature, that the panel still offers what it relies on: "
                    "ok, BROKEN: reason, or untested. Exits with 3 if a feature is broken.").add_argument(
                    "vm", help="the VM number, as `cbrm vms` lists it")
+    s = sub.add_parser("plan", help="Show what makes the panel match a desired-state file",
+                       description="Read every VM the desired-state files list and show the steps that make the panel "
+                       "match it (task-create, task-notification-set, task-delete), or `no change`. Reads only. The "
+                       "file format is in the docstring of cbrm.desired and in docs/operations.md.")
+    s.add_argument("file", nargs="+", help="the desired-state file(s) (TOML; several files form one state)")
+    s = sub.add_parser("apply", help="Make the panel match a desired-state file",
+                       description="Plan afresh, show the steps, then run them through the features, each with its "
+                       "checks, audit and verification. Changes nothing unless every VM the plan changes is repeated "
+                       "in --confirm and, where it creates a task, in --confirm-destroy too.")
+    s.add_argument("file", nargs="+", help="the desired-state file(s) (TOML; several files form one state)")
+    s.add_argument("--confirm", nargs="+", default=[], metavar="VM", help="repeat every VM the plan changes")
+    s.add_argument("--confirm-destroy", nargs="+", default=[], metavar="VM",
+                   help="repeat every VM the plan creates a task on (a task acts later and repeatedly)")
     s = sub.add_parser("serve", help="Run the HTTP API (needs CBRM_API_TOKEN)",
                        description="Run the HTTP API with the same features and rules; every route needs the bearer "
                        "token in CBRM_API_TOKEN. The OpenAPI schema is at /openapi.json.")
@@ -125,6 +138,17 @@ def main(argv: list[str] | None = None) -> None:
             out(b.vms())
         elif a.cmd == "features":
             _features(a, b.features(), out)
+        elif a.cmd in ("plan", "apply"):
+            from . import desired
+            wanted = desired.load_all(a.file)
+            if a.cmd == "plan":
+                steps = desired.plan(b, wanted)
+                out({"steps": steps, "changes": len(steps)} if a.json else (steps or ["no change"]))
+            else:
+                res = desired.apply(b, wanted, a.confirm, a.confirm_destroy)
+                out(res if a.json else (res["steps"] or ["no change"]))
+                if not res["complete"]:
+                    sys.exit(4)
         elif a.cmd == "doctor":
             res = b.check(a.vm)
             out(res)

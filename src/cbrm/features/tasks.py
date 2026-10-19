@@ -47,11 +47,13 @@ def _form_options(page) -> dict[str, dict[str, str]]:
     return out
 
 
-def _read(comp, labels: dict[str, str] | None = None) -> list[dict]:
-    """The component's tasks. `labels` maps an action's value to its label, to name the action by its value."""
+def _read(comp, labels: dict[str, str] | None = None, intervals: dict[str, str] | None = None) -> list[dict]:
+    """The component's tasks. `labels` and `intervals` map an action's and an interval's value to its label, to name
+    them by their values (the ones `task-create` takes); an interval the form does not offer stays None."""
     if comp.tree.css_first(".rootserver-task-item-new") is None:
         raise ContractError("task: the 'new task' tile is gone from the rendering")
     by_label = {v: k for k, v in (labels or {}).items()}
+    by_interval = {v: k for k, v in (intervals or {}).items()}
     out = []
     for node in comp.tree.css(".rootserver-task-item"):
         ids = set(re.findall(r"showDeleteTaskModal\((\d+)\)", node.html))
@@ -72,6 +74,7 @@ def _read(comp, labels: dict[str, str] | None = None) -> list[dict]:
         if bell is not None and bell.attributes.get("data-task-id") != task_id:
             raise ContractError(f"task: the notification button of task {task_id} names another task")
         out.append({"id": task_id, "action": by_label.get(text(title), text(title)), "label": text(title),
+                    "interval": by_interval.get(facts.get("Wiederholung")),
                     "repeat": facts.get("Wiederholung"), "next": panel_date(facts.get("Nächste Aktion")),
                     "notification": notification})
     return out
@@ -79,12 +82,14 @@ def _read(comp, labels: dict[str, str] | None = None) -> list[dict]:
 
 def _tasks(ctx, vm) -> list[dict]:
     page = ctx.product_page(vm)
-    return _read(page.component("task"), _form_options(page)["methode"])
+    options = _form_options(page)
+    return _read(page.component("task"), options["methode"], options["interval"])
 
 
 @feature("tasks", "read", "List the scheduled tasks",
-         "The VM's scheduled tasks: id, action, repeat interval, next run (panel time) and the e-mail "
-         "notification (mode none, always or failed_only, and the address if not the account's)")
+         "The VM's scheduled tasks: id, action and interval (the values task-create takes), the interval's label, "
+         "next run (panel time) and the e-mail notification (mode none, always or failed_only, and the address if "
+         "not the account's)")
 def _tasks_feature(ctx, vm):
     return _tasks(ctx, vm)
 

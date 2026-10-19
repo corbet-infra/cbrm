@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `cbrm plan <file…>` and `cbrm apply <file…> --confirm VM… [--confirm-destroy VM…]`: desired-state files (TOML) for
+  the scheduled tasks of some VMs; the plan reads only and shows the steps (or `no change`), apply runs them through
+  `task-create`, `task-notification-set` and `task-delete` with their own gates once every changed VM is confirmed
+  (docs/operations.md, "Desired state").
+- `tasks` also names the interval by its value (`interval`, e.g. `weekly`, as `task-create` takes it) next to the
+  panel's label (`repeat`).
+
 ## 0.6.1 — 2026-10-19
 
 Documentation and help text only; no command behaves differently.

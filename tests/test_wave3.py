@@ -179,7 +179,7 @@ def test_firewall_card_of_another_server_is_a_contract_error(tmp_path):
 
 def test_tasks_show_the_notification(svc):
     assert svc.run("tasks", "1") == [{"id": "7001", "action": "dump", "label": "Backup erstellen",
-                                      "repeat": "Wöchentlich", "next": "26.10.2026 01:42",
+                                      "interval": "weekly", "repeat": "Wöchentlich", "next": "26.10.2026 01:42",
                                       "notification": {"mode": "failed_only", "email": None, "label": "Nur bei Fehlern"}}]
 
 

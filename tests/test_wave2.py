@@ -162,7 +162,8 @@ def test_backups_and_slots(tmp_path, svc):
 
 def test_tasks(tmp_path, svc):
     assert svc.run("tasks", "1") == [{"id": "7001", "action": "dump", "label": "Backup erstellen",
-                                      "repeat": "Wöchentlich", "next": "14.10.2026 13:50", "notification": None}]
+                                      "interval": "weekly", "repeat": "Wöchentlich", "next": "14.10.2026 13:50",
+                                      "notification": None}]
     assert svc_for(tmp_path, EMPTY).run("tasks", "1") == []
 
 

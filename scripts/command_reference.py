@@ -38,7 +38,7 @@ AREAS = [
     ("Account: credit and bookkeeping (read only)", ("account-credit", "account-invoices", "account-invoice-download",
                                                      "account-orders", "account-transactions")),
 ]
-GENERAL = ("vms", "features", "doctor", "serve")
+GENERAL = ("vms", "features", "doctor", "plan", "apply", "serve")
 
 
 def anchor(title: str) -> str:

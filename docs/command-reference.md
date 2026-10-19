@@ -812,8 +812,8 @@ options:
 ### backup-restore
 
 ```
-usage: cbrm backup-restore [-h] --backup BACKUP [--live {yes,no}] --confirm VM [--dry-run]
-                           --confirm-destroy VM
+usage: cbrm backup-restore [-h] --backup BACKUP [--live {yes,no}] --confirm VM [--dry-run] --confirm-destroy
+                           VM
                            vm
 
 [destroy] Restore the whole VM from a backup. OVERWRITES THE DISK with the backup's state. Erases or
@@ -856,8 +856,9 @@ options:
 ```
 usage: cbrm tasks [-h] vm
 
-[read] The VM's scheduled tasks: id, action, repeat interval, next run (panel time) and the e-mail
-notification (mode none, always or failed_only, and the address if not the account's).
+[read] The VM's scheduled tasks: id, action and interval (the values task-create takes), the interval's
+label, next run (panel time) and the e-mail notification (mode none, always or failed_only, and the address
+if not the account's).
 
 positional arguments:
   vm          the VM number, as `cbrm vms` lists it
@@ -1408,8 +1409,8 @@ options:
 ### account-ticket-reply
 
 ```
-usage: cbrm account-ticket-reply [-h] --ticket TICKET --text TEXT [--attach ATTACH [ATTACH ...]]
-                                 --confirm VM [--dry-run]
+usage: cbrm account-ticket-reply [-h] --ticket TICKET --text TEXT [--attach ATTACH [ATTACH ...]] --confirm
+                                 VM [--dry-run]
                                  [vm]
 
 [change, account-wide] Reply to an open support ticket, optionally with attachments (files inside the
@@ -1582,6 +1583,42 @@ positional arguments:
 
 options:
   -h, --help  show this help message and exit
+```
+
+### plan
+
+```
+usage: cbrm plan [-h] file [file ...]
+
+Read every VM the desired-state files list and show the steps that make the panel match it (task-create,
+task-notification-set, task-delete), or `no change`. Reads only. The file format is in the docstring of
+cbrm.desired and in docs/operations.md.
+
+positional arguments:
+  file        the desired-state file(s) (TOML; several files form one state)
+
+options:
+  -h, --help  show this help message and exit
+```
+
+### apply
+
+```
+usage: cbrm apply [-h] [--confirm VM [VM ...]] [--confirm-destroy VM [VM ...]] file [file ...]
+
+Plan afresh, show the steps, then run them through the features, each with its checks, audit and
+verification. Changes nothing unless every VM the plan changes is repeated in --confirm and, where it
+creates a task, in --confirm-destroy too.
+
+positional arguments:
+  file                  the desired-state file(s) (TOML; several files form one state)
+
+options:
+  -h, --help            show this help message and exit
+  --confirm VM [VM ...]
+                        repeat every VM the plan changes
+  --confirm-destroy VM [VM ...]
+                        repeat every VM the plan creates a task on (a task acts later and repeatedly)
 ```
 
 ### serve
