@@ -295,7 +295,9 @@ BAD = {
     "options prefix": 'command="x" ' + VALID["ed25519"],
     "two keys": VALID["ed25519"] + "\n" + VALID["ed25519"],
     "carriage return": VALID["ed25519"] + "\r" + VALID["ed25519"],
+    # push-guard: allow test-only armor strings for the key-rejection test, not key material
     "private key armor": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----",
+    # push-guard: allow test-only armor strings for the key-rejection test, not key material
     "private key armor in one line": "x -----BEGIN RSA PRIVATE KEY----- b3BlbnNzaC1rZXk",
     "comment with a bell": key_line("ssh-ed25519", sshstr(bytes(range(32))), comment="me\x07host"),
     "comment with a tab": key_line("ssh-ed25519", sshstr(bytes(range(32))), comment="me\thost"),

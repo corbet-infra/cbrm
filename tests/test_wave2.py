@@ -466,6 +466,7 @@ def test_ssh_key_import_is_verified_by_fingerprint_and_name(svc):
     assert svc.run("account-ssh-key-import", "1", {"name": "ci", "public_key": key}, confirm="1")["verified"] is True
 
 
+# push-guard: allow test-only armor string for the key-rejection test, not key material
 @pytest.mark.parametrize("bad", ["-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----",
                                  "", "ssh-ed25519", "ssh-ed25519 !!!notbase64!!! x", "ssh-dss AAAAB3NzaC1kc3M= x",
                                  make_key() + "\n" + make_key(), 'command="x" ' + make_key(),
